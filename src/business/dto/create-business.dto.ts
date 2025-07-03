@@ -6,7 +6,7 @@ import {
   IsString,
   Length,
 } from 'class-validator';
-import { BusinessSize, BusinessType } from '../../../shared';
+import { BusinessSize, BusinessType } from '@shared';
 
 export class CreateBusinessDto {
   @IsNotEmpty()

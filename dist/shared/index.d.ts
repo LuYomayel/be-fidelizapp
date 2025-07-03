@@ -10,7 +10,7 @@ export declare enum BusinessType {
     MANICURA = "Manicura",
     OTRO = "Otro"
 }
-export interface IBusiness {
+export interface Business {
     id?: number | string;
     businessName: string;
     email: string;
@@ -23,38 +23,79 @@ export interface IBusiness {
     province: string;
     logoPath?: string;
     type: BusinessType;
+    customType?: string;
     instagram?: string;
     tiktok?: string;
     website?: string;
-    createdAt?: Date;
-    active?: boolean;
 }
 export interface Client {
     id?: number | string;
     email: string;
     firstName: string;
     lastName: string;
+    points?: number;
+    businessId?: string;
 }
-export interface CreateBusinessDto extends Omit<IBusiness, 'id' | 'logoPath'> {
+export interface Admin {
+    id?: number | string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: AdminRole;
+}
+export declare enum AdminRole {
+    SUPER_ADMIN = "super_admin",
+    BUSINESS_ADMIN = "business_admin"
+}
+export interface CreateBusinessDto extends Omit<Business, "id" | "logoPath"> {
     password: string;
-    logo?: File | undefined;
+    active?: boolean;
+    logo?: File | string;
 }
-export type UpdateBusinessDto = Partial<Omit<CreateBusinessDto, 'password'>>;
-export interface CreateClientDto extends Omit<Client, 'id'> {
+export interface CreateBusinessFormData extends Omit<Business, "id" | "logoPath"> {
+    password: string;
+    active?: boolean;
 }
-export type UpdateClientDto = Partial<CreateClientDto>;
+export type UpdateBusinessDto = Partial<Omit<CreateBusinessDto, "password">>;
+export interface CreateClientDto extends Omit<Client, "id"> {
+    password: string;
+}
+export type UpdateClientDto = Partial<Omit<CreateClientDto, "password">>;
+export interface LoginBusinessDto {
+    email: string;
+    password: string;
+    [key: string]: unknown;
+}
+export interface LoginClientDto {
+    email: string;
+    password: string;
+    [key: string]: unknown;
+}
+export interface ApiResponse<T> {
+    success: boolean;
+    data?: T;
+    message?: string;
+    error?: string;
+}
+export declare enum TransactionType {
+    ACUMULATION = "acumulacion",
+    EXCHANGE = "canje",
+    REWARD = "bonificacion",
+    PENALTY = "penalizacion"
+}
 export interface Reward {
     id: string;
     name: string;
     description: string;
-    requiredPoints: number;
-    image?: string;
-    active: boolean;
-    createdAt: Date;
-    expirationDate?: Date;
-    stock?: number;
+    points: number;
     businessId: string;
-    specialConditions?: string;
+    available: boolean;
+    validUntil?: Date;
+    imageUrl?: string;
+    terms?: string;
+    stock?: number;
+    createdAt: Date;
+    updatedAt: Date;
 }
 export interface Transaction {
     id: string;
@@ -63,101 +104,8 @@ export interface Transaction {
     type: TransactionType;
     points: number;
     description: string;
-    date: Date;
     rewardId?: string;
-    adminId: string;
-}
-export interface Admin {
-    id: string;
-    name: string;
-    email: string;
-    businessId: string;
-    role: AdminRole;
     createdAt: Date;
-    activo: boolean;
+    updatedAt: Date;
 }
-export declare enum TransactionType {
-    ACUMULATION = "acumulacion",
-    EXCHANGE = "canje",
-    REWARD = "bonificacion",
-    PENALTY = "penalizacion"
-}
-export declare enum AdminRole {
-    OWNER = "propietario",
-    EMPLOYEE = "empleado"
-}
-export interface ClientRegistrationForm {
-    firstName: string;
-    lastName: string;
-    email: string;
-}
-export interface BusinessRegistrationForm {
-    businessName: string;
-    email: string;
-    internalPhone: string;
-    externalPhone: string;
-    size: BusinessSize;
-    address: {
-        street: string;
-        neighborhood: string;
-        postalCode: string;
-        province: string;
-    };
-    logo?: string;
-    type: BusinessType;
-    customType?: string;
-    socialMedia: {
-        instagram?: string;
-        tiktok?: string;
-        website?: string;
-    };
-    logoFile?: File;
-}
-export interface CreateBusiness {
-    createBusinessDto: CreateBusinessDto;
-    logo?: File | undefined;
-}
-export interface CreateRewardForm {
-    name: string;
-    description: string;
-    requiredPoints: number;
-    image?: File;
-    expirationDate?: Date;
-    stock?: number;
-    specialConditions?: string;
-}
-export interface AssignPointsForm {
-    clientId: string;
-    points: number;
-    description: string;
-}
-export interface ApiResponse<T> {
-    success: boolean;
-    data?: T;
-    message?: string;
-    error?: string;
-}
-export interface PaginatedResponse<T> {
-    data: T[];
-    pagination: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
-}
-export interface BusinessStatistics {
-    totalClientes: number;
-    clientesActivos: number;
-    sellosEmitidos: number;
-    recompensasCanjeadas: number;
-    retencionClientes: number;
-    ventasMes: {
-        mes: string;
-        ventas: number;
-    }[];
-    premiosMasCanjeados: {
-        premio: string;
-        canjes: number;
-    }[];
-}
+export type ClientRegistrationForm = CreateClientDto;

@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { BusinessSize, BusinessType, IBusiness } from '../../../shared';
+import { BusinessSize, BusinessType, Business as IBusiness } from '@shared';
 
 @Entity('businesses')
 export class Business implements IBusiness {
