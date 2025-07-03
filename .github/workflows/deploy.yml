@@ -1,0 +1,65 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT || 22 }}
+          script: |
+            echo "🚀 Iniciando despliegue en producción..."
+
+            # Navegar al directorio del proyecto
+            cd ${{ secrets.PROD_PROJECT_PATH || '/home/be-fidelizapp' }}
+
+            echo "📥 Descargando últimos cambios..."
+            git pull origin main
+
+            echo "📥 Descargando últimos cambios de las interfaces"
+            cd shared
+            git pull origin main
+            cd ..
+
+            echo "📦 Instalando dependencias..."
+            npm install
+
+            echo "🏗️ Construyendo proyecto..."
+            npm run build
+
+            echo "🔄 Reiniciando aplicación con PM2..."
+            pm2 restart ${{ secrets.PM2_APP_ID || '6' }}
+
+            echo "✅ Despliegue completado exitosamente!"
+
+            # Verificar el estado de la aplicación
+            echo "📊 Estado de la aplicación:"
+            pm2 show ${{ secrets.PM2_APP_ID || '6' }}
+
+            echo "🎉 Aplicación desplegada y funcionando correctamente!"
