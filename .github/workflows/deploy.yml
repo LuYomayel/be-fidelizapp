@@ -43,6 +43,7 @@ jobs:
             git pull origin main
 
             echo "📥 Descargando últimos cambios de las interfaces"
+            git submodule update --init --recursive
             cd shared
             git pull origin main
             cd ..
