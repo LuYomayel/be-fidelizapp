@@ -39,7 +39,7 @@ export class BusinessController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
           return cb(new Error('Solo se permiten archivos de imagen'), false);
         }
         cb(null, true);
@@ -51,7 +51,7 @@ export class BusinessController {
     @UploadedFile() logo?: Express.Multer.File,
   ) {
     try {
-      const logoPath = logo ? logo.path : undefined;
+      const logoPath = logo ? logo?.path : undefined;
       const business = await this.businessService.create(
         createBusinessDto,
         logoPath,
@@ -66,7 +66,7 @@ export class BusinessController {
       return {
         success: false,
         data: null,
-        message: 'Error al registrar el negocio',
+        message: error.message || 'Error al registrar el negocio',
       };
     }
   }

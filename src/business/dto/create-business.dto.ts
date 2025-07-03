@@ -72,4 +72,7 @@ export class CreateBusinessDto {
   @IsString()
   @Length(1, 255)
   website?: string;
+
+  @IsOptional()
+  logo?: Express.Multer.File;
 }

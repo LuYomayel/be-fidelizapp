@@ -31,12 +31,12 @@ export class ClientsController {
         data: client,
         message: 'Cliente registrado exitosamente',
       };
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
       return {
         success: false,
         data: null,
-        message: 'Error al registrar el cliente',
+        message: error.message || 'Error al registrar el cliente',
       };
     }
   }
