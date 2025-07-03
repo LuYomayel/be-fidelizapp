@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TransactionType = exports.AdminRole = exports.BusinessType = exports.BusinessSize = void 0;
+exports.AdminRole = exports.TransactionType = exports.BusinessType = exports.BusinessSize = void 0;
 var BusinessSize;
 (function (BusinessSize) {
     BusinessSize["SMALL"] = "1-5 sucursales";
@@ -15,11 +15,6 @@ var BusinessType;
     BusinessType["MANICURA"] = "Manicura";
     BusinessType["OTRO"] = "Otro";
 })(BusinessType || (exports.BusinessType = BusinessType = {}));
-var AdminRole;
-(function (AdminRole) {
-    AdminRole["SUPER_ADMIN"] = "super_admin";
-    AdminRole["BUSINESS_ADMIN"] = "business_admin";
-})(AdminRole || (exports.AdminRole = AdminRole = {}));
 var TransactionType;
 (function (TransactionType) {
     TransactionType["ACUMULATION"] = "acumulacion";
@@ -27,4 +22,9 @@ var TransactionType;
     TransactionType["REWARD"] = "bonificacion";
     TransactionType["PENALTY"] = "penalizacion";
 })(TransactionType || (exports.TransactionType = TransactionType = {}));
+var AdminRole;
+(function (AdminRole) {
+    AdminRole["OWNER"] = "propietario";
+    AdminRole["EMPLOYEE"] = "empleado";
+})(AdminRole || (exports.AdminRole = AdminRole = {}));
 //# sourceMappingURL=index.js.map
