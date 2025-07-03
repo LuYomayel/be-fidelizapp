@@ -41,13 +41,25 @@ export interface CreateBusinessDto extends Omit<IBusiness, 'id' | 'logoPath'> {
 }
 export type UpdateBusinessDto = Partial<Omit<CreateBusinessDto, 'password'>>;
 export interface CreateClientDto extends Omit<Client, 'id'> {
+    password: string;
 }
 export type UpdateClientDto = Partial<CreateClientDto>;
+export interface LoginBusinessDto {
+    email: string;
+    password: string;
+    [key: string]: unknown;
+}
+export interface LoginClientDto {
+    email: string;
+    password: string;
+    [key: string]: unknown;
+}
 export interface Reward {
     id: string;
     name: string;
     description: string;
     requiredPoints: number;
+    points: number;
     image?: string;
     active: boolean;
     createdAt: Date;
@@ -85,37 +97,6 @@ export declare enum TransactionType {
 export declare enum AdminRole {
     OWNER = "propietario",
     EMPLOYEE = "empleado"
-}
-export interface ClientRegistrationForm {
-    firstName: string;
-    lastName: string;
-    email: string;
-}
-export interface BusinessRegistrationForm {
-    businessName: string;
-    email: string;
-    internalPhone: string;
-    externalPhone: string;
-    size: BusinessSize;
-    address: {
-        street: string;
-        neighborhood: string;
-        postalCode: string;
-        province: string;
-    };
-    logo?: string;
-    type: BusinessType;
-    customType?: string;
-    socialMedia: {
-        instagram?: string;
-        tiktok?: string;
-        website?: string;
-    };
-    logoFile?: File;
-}
-export interface CreateBusiness {
-    createBusinessDto: CreateBusinessDto;
-    logo?: File | undefined;
 }
 export interface CreateRewardForm {
     name: string;
@@ -160,4 +141,7 @@ export interface BusinessStatistics {
         premio: string;
         canjes: number;
     }[];
+}
+export interface ClientRegistrationForm extends Omit<CreateClientDto, 'password'> {
+    password?: string;
 }
