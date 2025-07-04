@@ -158,6 +158,7 @@ export class ClientsService {
   generateToken(client: Client): string {
     const payload = {
       sub: client.id,
+      username: client.email, // Usar email como username
       email: client.email,
       type: 'client',
       provider: client.provider,

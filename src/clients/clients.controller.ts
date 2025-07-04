@@ -93,8 +93,13 @@ export class ClientsController {
             email: client.email,
             firstName: client.firstName,
             lastName: client.lastName,
+            provider: client.provider,
           },
           token,
+          tokens: {
+            accessToken: token,
+            refreshToken: token, // Por ahora usar el mismo token
+          },
         },
         message: 'Login exitoso',
       };

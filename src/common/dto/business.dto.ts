@@ -158,7 +158,7 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     format: 'binary',
   })
   @IsOptional()
-  logo?: Express.Multer.File;
+  logo?: File;
 }
 
 export class UpdateBusinessDto

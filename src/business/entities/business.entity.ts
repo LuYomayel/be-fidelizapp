@@ -33,16 +33,16 @@ export class Business implements IBusiness {
   })
   size: BusinessSize;
 
-  @Column({ length: 255 })
+  @Column({ length: 255, nullable: true })
   street: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   neighborhood: string;
 
-  @Column({ length: 10 })
+  @Column({ length: 10, nullable: true })
   postalCode: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   province: string;
 
   @Column({ nullable: true })
@@ -62,6 +62,12 @@ export class Business implements IBusiness {
 
   @Column({ nullable: true, length: 255 })
   website?: string;
+
+  @Column({ name: 'stamps_for_reward', type: 'int', default: 10 })
+  stampsForReward: number; // Cantidad de sellos necesarios para una recompensa
+
+  @Column({ length: 255, nullable: true })
+  rewardDescription?: string; // Descripción de la recompensa (ej: "Café gratis")
 
   @CreateDateColumn()
   createdAt: Date;

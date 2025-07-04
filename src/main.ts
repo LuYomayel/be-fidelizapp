@@ -70,7 +70,7 @@ async function bootstrap() {
     .setContact(
       'Luciano Yomayel',
       'https://luciano-yomayel.com',
-      'contacto@luciano-yomayel.com',
+      'l.yomayel@gmail.com',
     )
     .setLicense('MIT', 'https://opensource.org/licenses/MIT')
     .build();

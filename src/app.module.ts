@@ -9,6 +9,9 @@ import { BusinessModule } from './business/business.module';
 import { ClientsModule } from './clients/clients.module';
 import { Business } from './business/entities/business.entity';
 import { Client } from './clients/entities/client.entity';
+import { Stamp } from './business/entities/stamp.entity';
+import { ClientCard } from './clients/entities/client-card.entity';
+import { StampRedemption } from './clients/entities/stamp-redemption.entity';
 
 @Module({
   imports: [
@@ -26,9 +29,9 @@ import { Client } from './clients/entities/client.entity';
           username: configService.get<string>('DB_USERNAME') || 'root',
           password: configService.get<string>('DB_PASSWORD') || 'password',
           database: configService.get<string>('DB_NAME') || 'fidelizapp',
-          entities: [Business, Client],
+          entities: [Business, Client, Stamp, ClientCard, StampRedemption],
           synchronize: true, // Solo para desarrollo
-          logging: true,
+          logging: false,
         };
       },
       inject: [ConfigService],

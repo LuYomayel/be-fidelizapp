@@ -59,7 +59,11 @@ export class AuthService {
   }
 
   login(user: { username: string; userId: number }) {
-    const payload = { username: user.username, sub: user.userId };
+    const payload = {
+      username: user.username,
+      sub: user.userId,
+      type: 'business', // Identificar que es un negocio
+    };
     return {
       access_token: this.jwtService.sign(payload),
     };

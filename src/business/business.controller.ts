@@ -168,6 +168,10 @@ export class BusinessController {
             businessName: business.businessName,
           },
           token,
+          tokens: {
+            accessToken: token,
+            refreshToken: token, // Por ahora usar el mismo token
+          },
         },
         message: 'Login exitoso',
       };

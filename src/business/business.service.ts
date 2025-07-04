@@ -103,6 +103,7 @@ export class BusinessService {
   generateToken(business: Business): string {
     const payload = {
       sub: business.id,
+      username: business.email, // Usar email como username
       email: business.email,
       type: 'business',
     };
