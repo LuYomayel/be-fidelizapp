@@ -16,13 +16,24 @@ import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { LoginClientDto } from './dto/login-client.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 
+@ApiTags('clients')
 @Controller('clients')
 @UsePipes(new ValidationPipe())
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 
   @Post('register')
+  @ApiOperation({ summary: 'Registrar un cliente' })
+  @ApiBody({ type: CreateClientDto })
+  @ApiResponse({ status: 201, description: 'Cliente registrado exitosamente' })
   async create(@Body() createClientDto: CreateClientDto) {
     try {
       const client = await this.clientsService.create(createClientDto);
@@ -42,6 +53,9 @@ export class ClientsController {
   }
 
   @Post('login')
+  @ApiOperation({ summary: 'Login de cliente' })
+  @ApiBody({ type: LoginClientDto })
+  @ApiResponse({ status: 200, description: 'Login exitoso' })
   async login(@Body() loginClientDto: LoginClientDto) {
     try {
       const client = await this.clientsService.validateClient(

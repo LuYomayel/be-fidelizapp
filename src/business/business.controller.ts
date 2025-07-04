@@ -21,13 +21,26 @@ import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { LoginBusinessDto } from './dto/login-business.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 
+@ApiTags('businesses')
 @Controller('business')
 @UsePipes(new ValidationPipe())
 export class BusinessController {
   constructor(private readonly businessService: BusinessService) {}
 
   @Post('register')
+  @ApiOperation({ summary: 'Registrar un negocio' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateBusinessDto })
+  @ApiResponse({ status: 201, description: 'Negocio registrado exitosamente' })
   @UseInterceptors(
     FileInterceptor('logo', {
       storage: diskStorage({

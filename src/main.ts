@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -8,6 +9,17 @@ async function bootstrap() {
     origin: process.env.CORS_ORIGIN,
     credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000);
+
+  const config = new DocumentBuilder()
+    .setTitle('FidelizApp API')
+    .setDescription('Documentación automática de endpoints')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document);
+
+  await app.listen(4000);
 }
 bootstrap();

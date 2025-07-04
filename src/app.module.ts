@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -14,17 +14,24 @@ import { Client } from './clients/entities/client.entity';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '3306'),
-      username: process.env.DB_USERNAME || 'root',
-      password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_NAME || 'fidelizapp',
-      entities: [Business, Client],
-      synchronize: true, // Solo para desarrollo
-      logging: true,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        return {
+          type: 'mysql',
+          host: configService.get<string>('DB_HOST') || 'localhost',
+          port: parseInt(configService.get<string>('DB_PORT') || '3306'),
+          username: configService.get<string>('DB_USERNAME') || 'root',
+          password: configService.get<string>('DB_PASSWORD') || 'password',
+          database: configService.get<string>('DB_NAME') || 'fidelizapp',
+          entities: [Business, Client],
+          synchronize: true, // Solo para desarrollo
+          logging: true,
+        };
+      },
+      inject: [ConfigService],
     }),
     UsersModule,
     AuthModule,
