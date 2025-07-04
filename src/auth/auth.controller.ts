@@ -18,6 +18,10 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { LoginBusinessDto } from '../business/dto/login-business.dto';
+import * as dotenv from 'dotenv';
+
+// Cargar variables de entorno
+dotenv.config();
 
 class LoginResponse {
   success: boolean;
@@ -79,14 +83,17 @@ export class AuthController {
     try {
       const loginResult = this.authService.loginWithGoogle(req.user);
 
-      // Construir URL de redirección con el token
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      // Construir URL de redirección con el token - PRODUCCIÓN
+      const frontendUrl =
+        process.env.FRONTEND_URL || 'https://fidelizapp.luciano-yomayel.com';
       const redirectUrl = `${frontendUrl}/auth/google/callback?token=${loginResult.access_token}&user=${encodeURIComponent(JSON.stringify(loginResult.user))}`;
 
+      console.log('🔗 Redirigiendo a:', redirectUrl);
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error en callback de Google:', error);
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl =
+        process.env.FRONTEND_URL || 'https://fidelizapp.luciano-yomayel.com';
       const errorMessage =
         error instanceof Error ? error.message : 'Error de autenticación';
       res.redirect(
