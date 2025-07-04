@@ -1,23 +1,28 @@
 import {
   Controller,
   Post,
+  Body,
+  Get,
   UseGuards,
   Request,
-  Get,
-  Body,
   Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { GoogleAuthGuard } from './google-auth.guard';
-import { Request as ExpressRequest, Response } from 'express';
+import { LoginBusinessDto } from '../common/dto';
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse as SwaggerApiResponse,
+  ApiResponse,
   ApiBody,
+  ApiBearerAuth,
+  ApiUnauthorizedResponse,
+  ApiBadRequestResponse,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
-import { LoginBusinessDto } from '../business/dto/login-business.dto';
+import { Request as ExpressRequest } from 'express';
 import * as dotenv from 'dotenv';
 
 // Cargar variables de entorno
@@ -35,13 +40,17 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('login')
-  @ApiOperation({ summary: 'Login de negocio' })
+  @ApiOperation({
+    summary: 'Login de negocio',
+    description: 'Autenticación de negocios usando email y contraseña',
+  })
   @ApiBody({ type: LoginBusinessDto })
-  @SwaggerApiResponse({
+  @ApiResponse({
     status: 200,
     description: 'Login exitoso',
     type: LoginResponse,
   })
+  @ApiBadRequestResponse({ description: 'Datos de login inválidos' })
   login(@Body() loginBusinessDto: LoginBusinessDto): LoginResponse {
     try {
       const data = this.authService.login({
@@ -60,28 +69,48 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  @ApiOperation({ summary: 'Iniciar autenticación con Google' })
-  @SwaggerApiResponse({
+  @ApiOperation({
+    summary: 'Iniciar autenticación con Google',
+    description:
+      'Redirige al usuario a la página de autenticación de Google OAuth',
+  })
+  @ApiResponse({
     status: 302,
     description: 'Redirección a Google OAuth',
   })
+  @ApiExcludeEndpoint()
   googleAuth() {
     // El guard redirige automáticamente a Google
   }
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  @ApiOperation({ summary: 'Callback de autenticación con Google' })
-  @SwaggerApiResponse({
+  @ApiOperation({
+    summary: 'Callback de autenticación con Google',
+    description:
+      'Endpoint que maneja la respuesta de Google OAuth y genera token JWT',
+  })
+  @ApiResponse({
     status: 302,
     description: 'Redirección tras autenticación exitosa',
   })
-  googleAuthRedirect(
+  @ApiResponse({
+    status: 302,
+    description: 'Redirección a página de error en caso de fallo',
+  })
+  @ApiExcludeEndpoint()
+  async googleAuthRedirect(
     @Request() req: ExpressRequest & { user: any },
     @Res() res: Response,
   ) {
     try {
-      const loginResult = this.authService.loginWithGoogle(req.user);
+      console.log('🔄 Procesando callback de Google OAuth...');
+
+      // Validar y procesar el usuario de Google
+      const validatedUser = await this.authService.validateGoogleUser(req.user);
+
+      // Generar token para el cliente
+      const loginResult = this.authService.loginWithGoogle(validatedUser);
 
       // Construir URL de redirección con el token - PRODUCCIÓN
       const frontendUrl =
@@ -91,7 +120,7 @@ export class AuthController {
       console.log('🔗 Redirigiendo a:', redirectUrl);
       res.redirect(redirectUrl);
     } catch (error) {
-      console.error('Error en callback de Google:', error);
+      console.error('❌ Error en callback de Google:', error);
       const frontendUrl =
         process.env.FRONTEND_URL || 'https://fidelizapp.luciano-yomayel.com';
       const errorMessage =
@@ -102,8 +131,29 @@ export class AuthController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Obtener perfil del usuario autenticado',
+    description:
+      'Devuelve la información del usuario autenticado basado en el token JWT',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil del usuario obtenido exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'number' },
+        username: { type: 'string' },
+        email: { type: 'string' },
+        type: { type: 'string', enum: ['business', 'client'] },
+        provider: { type: 'string', enum: ['email', 'google'] },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Token JWT inválido o expirado' })
   getProfile(
     @Request()
     req: ExpressRequest & { user: { userId: number; username: string } },

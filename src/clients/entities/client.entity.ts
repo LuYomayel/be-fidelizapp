@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserProvider } from '@shared';
 
 @Entity('clients')
 export class Client {
@@ -14,14 +15,31 @@ export class Client {
   @Column({ unique: true })
   email: string;
 
-  @Column()
-  password: string;
+  @Column({ nullable: true }) // Opcional para usuarios de Google OAuth
+  password?: string;
 
   @Column({ length: 100 })
   firstName: string;
 
   @Column({ length: 100 })
   lastName: string;
+
+  // Campos para Google OAuth
+  @Column({ nullable: true })
+  googleId?: string;
+
+  @Column({ nullable: true })
+  profilePicture?: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserProvider,
+    default: UserProvider.EMAIL,
+  })
+  provider: UserProvider;
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

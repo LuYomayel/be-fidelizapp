@@ -12,9 +12,11 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ClientsService } from './clients.service';
-import { CreateClientDto } from './dto/create-client.dto';
-import { UpdateClientDto } from './dto/update-client.dto';
-import { LoginClientDto } from './dto/login-client.dto';
+import {
+  CreateClientDto,
+  UpdateClientDto,
+  LoginClientDto,
+} from '../common/dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   ApiTags,
@@ -22,6 +24,9 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
+  ApiUnauthorizedResponse,
+  ApiNotFoundResponse,
 } from '@nestjs/swagger';
 
 @ApiTags('clients')
@@ -34,6 +39,8 @@ export class ClientsController {
   @ApiOperation({ summary: 'Registrar un cliente' })
   @ApiBody({ type: CreateClientDto })
   @ApiResponse({ status: 201, description: 'Cliente registrado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 409, description: 'El email ya está registrado' })
   async create(@Body() createClientDto: CreateClientDto) {
     try {
       const client = await this.clientsService.create(createClientDto);
@@ -47,7 +54,10 @@ export class ClientsController {
       return {
         success: false,
         data: null,
-        message: error.message || 'Error al registrar el cliente',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Error al registrar el cliente',
       };
     }
   }
@@ -56,6 +66,7 @@ export class ClientsController {
   @ApiOperation({ summary: 'Login de cliente' })
   @ApiBody({ type: LoginClientDto })
   @ApiResponse({ status: 200, description: 'Login exitoso' })
+  @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() loginClientDto: LoginClientDto) {
     try {
       const client = await this.clientsService.validateClient(
@@ -99,6 +110,13 @@ export class ClientsController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Obtener todos los clientes' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de clientes obtenida exitosamente',
+  })
+  @ApiUnauthorizedResponse({ description: 'No autorizado' })
   async findAll() {
     try {
       const clients = await this.clientsService.findAll();
@@ -115,6 +133,12 @@ export class ClientsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Obtener un cliente por ID' })
+  @ApiParam({ name: 'id', description: 'ID del cliente' })
+  @ApiResponse({ status: 200, description: 'Cliente obtenido exitosamente' })
+  @ApiNotFoundResponse({ description: 'Cliente no encontrado' })
+  @ApiUnauthorizedResponse({ description: 'No autorizado' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     try {
       const client = await this.clientsService.findOne(id);
@@ -131,6 +155,13 @@ export class ClientsController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Actualizar un cliente' })
+  @ApiParam({ name: 'id', description: 'ID del cliente' })
+  @ApiBody({ type: UpdateClientDto })
+  @ApiResponse({ status: 200, description: 'Cliente actualizado exitosamente' })
+  @ApiNotFoundResponse({ description: 'Cliente no encontrado' })
+  @ApiUnauthorizedResponse({ description: 'No autorizado' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateClientDto: UpdateClientDto,
@@ -154,6 +185,12 @@ export class ClientsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Eliminar un cliente' })
+  @ApiParam({ name: 'id', description: 'ID del cliente' })
+  @ApiResponse({ status: 200, description: 'Cliente eliminado exitosamente' })
+  @ApiNotFoundResponse({ description: 'Cliente no encontrado' })
+  @ApiUnauthorizedResponse({ description: 'No autorizado' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     try {
       await this.clientsService.remove(id);

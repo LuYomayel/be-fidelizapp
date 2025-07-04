@@ -8,8 +8,9 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Client } from './entities/client.entity';
-import { CreateClientDto } from './dto/create-client.dto';
-import { UpdateClientDto } from './dto/update-client.dto';
+import { CreateClientDto, UpdateClientDto } from '../common/dto';
+import { UserProvider } from '@shared';
+import { GoogleUser } from '../auth/google.strategy';
 
 @Injectable()
 export class ClientsService {
@@ -34,6 +35,7 @@ export class ClientsService {
       const client = this.clientRepository.create({
         ...createClientDto,
         password: hashedPassword,
+        provider: UserProvider.EMAIL,
       });
       console.log(client);
       return await this.clientRepository.save(client);
@@ -41,6 +43,59 @@ export class ClientsService {
       console.log(error);
       throw new ConflictException(error);
     }
+  }
+
+  async createGoogleClient(googleUser: GoogleUser): Promise<Client> {
+    try {
+      // Extraer googleId del accessToken o usar email como identificador único
+      const googleId = googleUser.accessToken.substring(0, 50); // Usar parte del token como ID único
+
+      const client = this.clientRepository.create({
+        email: googleUser.email,
+        firstName: googleUser.firstName,
+        lastName: googleUser.lastName,
+        googleId: googleId,
+        profilePicture: googleUser.picture,
+        provider: UserProvider.GOOGLE,
+        isActive: true,
+      });
+
+      console.log('🚀 Creando nuevo cliente de Google OAuth:', {
+        email: client.email,
+        firstName: client.firstName,
+        lastName: client.lastName,
+        provider: client.provider,
+      });
+
+      return await this.clientRepository.save(client);
+    } catch (error) {
+      console.error('❌ Error creando cliente de Google:', error);
+      throw new ConflictException('Error al crear cliente con Google OAuth');
+    }
+  }
+
+  async findOrCreateGoogleClient(googleUser: GoogleUser): Promise<Client> {
+    // Primero intentar encontrar el cliente por email
+    let client = await this.findByEmail(googleUser.email);
+
+    if (client) {
+      console.log('✅ Cliente existente encontrado:', client.email);
+
+      // Si el cliente existe pero no tiene provider de Google, actualizarlo
+      if (client.provider !== UserProvider.GOOGLE) {
+        client.provider = UserProvider.GOOGLE;
+        client.googleId = googleUser.accessToken.substring(0, 50);
+        client.profilePicture = googleUser.picture;
+        client = await this.clientRepository.save(client);
+        console.log('🔄 Cliente actualizado para Google OAuth');
+      }
+
+      return client;
+    }
+
+    // Si no existe, crear nuevo cliente
+    console.log('🆕 Creando nuevo cliente de Google OAuth');
+    return await this.createGoogleClient(googleUser);
   }
 
   async findAll(): Promise<Client[]> {
@@ -90,7 +145,11 @@ export class ClientsService {
     password: string,
   ): Promise<Client | null> {
     const client = await this.findByEmail(email);
-    if (client && (await this.validatePassword(password, client.password))) {
+    if (
+      client &&
+      client.password &&
+      (await this.validatePassword(password, client.password))
+    ) {
       return client;
     }
     return null;
@@ -101,6 +160,7 @@ export class ClientsService {
       sub: client.id,
       email: client.email,
       type: 'client',
+      provider: client.provider,
     };
     return this.jwtService.sign(payload);
   }

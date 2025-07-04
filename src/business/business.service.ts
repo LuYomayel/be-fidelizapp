@@ -8,8 +8,7 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Business } from './entities/business.entity';
-import { CreateBusinessDto } from './dto/create-business.dto';
-import { UpdateBusinessDto } from './dto/update-business.dto';
+import { CreateBusinessDto, UpdateBusinessDto } from '../common/dto';
 
 @Injectable()
 export class BusinessService {

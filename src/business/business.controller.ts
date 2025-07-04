@@ -17,9 +17,11 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { BusinessService } from './business.service';
-import { CreateBusinessDto } from './dto/create-business.dto';
-import { UpdateBusinessDto } from './dto/update-business.dto';
-import { LoginBusinessDto } from './dto/login-business.dto';
+import {
+  CreateBusinessDto,
+  UpdateBusinessDto,
+  LoginBusinessDto,
+} from '../common/dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   ApiTags,
@@ -28,6 +30,11 @@ import {
   ApiConsumes,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
+  ApiUnauthorizedResponse,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
 
 @ApiTags('businesses')
@@ -37,10 +44,29 @@ export class BusinessController {
   constructor(private readonly businessService: BusinessService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Registrar un negocio' })
+  @ApiOperation({
+    summary: 'Registrar un negocio',
+    description: 'Crea un nuevo negocio con opción de subir logo',
+  })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: CreateBusinessDto })
-  @ApiResponse({ status: 201, description: 'Negocio registrado exitosamente' })
+  @ApiBody({
+    type: CreateBusinessDto,
+    description: 'Datos del negocio a registrar',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Negocio registrado exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: { type: 'object' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiBadRequestResponse({ description: 'Datos inválidos' })
+  @ApiConflictResponse({ description: 'El email ya está registrado' })
   @UseInterceptors(
     FileInterceptor('logo', {
       storage: diskStorage({
@@ -79,12 +105,42 @@ export class BusinessController {
       return {
         success: false,
         data: null,
-        message: error.message || 'Error al registrar el negocio',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Error al registrar el negocio',
       };
     }
   }
 
   @Post('login')
+  @ApiOperation({
+    summary: 'Login de negocio',
+    description: 'Autenticación de negocios usando email y contraseña',
+  })
+  @ApiBody({
+    type: LoginBusinessDto,
+    description: 'Credenciales de acceso del negocio',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login exitoso',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            business: { type: 'object' },
+            token: { type: 'string' },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() loginBusinessDto: LoginBusinessDto) {
     try {
       const business = await this.businessService.validateBusiness(
@@ -127,6 +183,26 @@ export class BusinessController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Obtener todos los negocios',
+    description: 'Lista todos los negocios registrados',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de negocios obtenida exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'array',
+          items: { type: 'object' },
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Token JWT requerido' })
   async findAll() {
     try {
       const businesses = await this.businessService.findAll();
@@ -143,6 +219,30 @@ export class BusinessController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Obtener un negocio por ID',
+    description: 'Obtiene la información detallada de un negocio específico',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del negocio',
+    type: 'number',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Negocio obtenido exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: { type: 'object' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Negocio no encontrado' })
+  @ApiUnauthorizedResponse({ description: 'Token JWT requerido' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     try {
       const business = await this.businessService.findOne(id);
@@ -159,6 +259,36 @@ export class BusinessController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Actualizar un negocio',
+    description: 'Actualiza la información de un negocio existente',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del negocio',
+    type: 'number',
+    example: 1,
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    type: UpdateBusinessDto,
+    description: 'Datos actualizados del negocio',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Negocio actualizado exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: { type: 'object' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Negocio no encontrado' })
+  @ApiUnauthorizedResponse({ description: 'Token JWT requerido' })
   @UseInterceptors(
     FileInterceptor('logo', {
       storage: diskStorage({
@@ -205,6 +335,30 @@ export class BusinessController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Eliminar un negocio',
+    description: 'Elimina un negocio del sistema',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del negocio',
+    type: 'number',
+    example: 1,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Negocio eliminado exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Negocio no encontrado' })
+  @ApiUnauthorizedResponse({ description: 'Token JWT requerido' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     try {
       await this.businessService.remove(id);
