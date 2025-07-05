@@ -83,16 +83,14 @@ export class StampController {
     @Request() req: any,
     @Body() quickStampDto: QuickStampDto,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    console.log('req.user', req.user);
     const businessId = req.user.userId;
-    console.log('businessId', businessId);
     // Crear DTO compatible basado en valor de venta
     const createStampDto: CreateStampDto = {
       stampType: 'compra' as any,
       stampValue:
-        quickStampDto.saleValue >= 200
+        quickStampDto.saleValue >= 2500
           ? 3
-          : quickStampDto.saleValue >= 100
+          : quickStampDto.saleValue >= 1500
             ? 2
             : 1,
       description:
