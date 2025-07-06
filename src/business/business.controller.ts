@@ -12,6 +12,7 @@ import {
   UseGuards,
   ParseIntPipe,
   Put,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -181,6 +182,51 @@ export class BusinessController {
         success: false,
         data: null,
         message: 'Error al iniciar sesión',
+      };
+    }
+  }
+
+  @Get('dashboard')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Obtener dashboard de negocio',
+    description: 'Obtiene el dashboard de negocio',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard de negocio obtenido exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            totalStamps: { type: 'number' },
+            activeClients: { type: 'number' },
+            rewardsExchanged: { type: 'number' },
+            clientRetention: { type: 'number' },
+            recentClients: { type: 'array' },
+          },
+        },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Token JWT requerido' })
+  async getDashboard(@Req() req: any) {
+    try {
+      const dashboard = await this.businessService.getDashboard(
+        req.user.userId,
+      );
+      return { success: true, data: dashboard };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        data: null,
+        message: 'Error al obtener el dashboard',
       };
     }
   }

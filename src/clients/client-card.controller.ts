@@ -101,7 +101,7 @@ export class ClientCardController {
     @Request() req: any,
     @Body() redeemStampDto: RedeemStampDto,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    const clientId = req.user.clientId || req.user.id;
+    const clientId = req.user.userId;
     const result = await this.stampService.redeemStamp(
       clientId,
       redeemStampDto.code,
@@ -154,8 +154,7 @@ export class ClientCardController {
   async getClientCards(
     @Request() req: any,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    console.log('req.user', req.user);
-    const clientId = req.user.clientId || req.user.id;
+    const clientId = req.user.userId;
     const cards = await this.stampService.getClientCards(clientId);
 
     return {
@@ -189,7 +188,7 @@ export class ClientCardController {
     @Request() req: any,
     @Param('businessId', ParseIntPipe) businessId: number,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    const clientId = req.user.clientId || req.user.id;
+    const clientId = req.user.userId;
     const card = await this.stampService.getClientCardByBusiness(
       clientId,
       businessId,
@@ -243,7 +242,7 @@ export class ClientCardController {
     @Request() req: any,
     @Param('businessId', ParseIntPipe) businessId: number,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    const clientId = req.user.clientId || req.user.id;
+    const clientId = req.user.userId;
     const history = await this.stampService.getRedemptionHistory(
       clientId,
       businessId,

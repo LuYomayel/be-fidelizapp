@@ -328,6 +328,7 @@ export class StampService {
     page: number;
     totalPages: number;
   }> {
+    console.log('businessId', businessId);
     const [stamps, total] = await this.stampRepository.findAndCount({
       where: { businessId },
       relations: ['business'],
@@ -335,13 +336,23 @@ export class StampService {
       skip: (page - 1) * limit,
       take: limit,
     });
-
+    console.log('stamps', stamps);
     return {
       stamps,
       total,
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  /**
+   * Obtiene todas las client cards de un negocio
+   */
+  async getClientCardsByBusiness(businessId: number): Promise<ClientCard[]> {
+    return await this.clientCardRepository.find({
+      where: { businessId },
+      relations: ['client', 'business'],
+    });
   }
 
   /**
@@ -507,5 +518,66 @@ export class StampService {
         await this.stampRepository.save(stamp);
       }
     }
+  }
+
+  /**
+   * Obtiene todos los clientes que han interactuado con un negocio
+   */
+  async getBusinessClients(businessId: number): Promise<{
+    clients: Array<{
+      id: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+      profilePicture?: string;
+      totalStamps: number;
+      availableStamps: number;
+      usedStamps: number;
+      level: number;
+      lastStampDate?: Date;
+      totalRedemptions: number;
+      createdAt: Date;
+    }>;
+    total: number;
+  }> {
+    const clientCards = await this.clientCardRepository.find({
+      where: { businessId },
+      relations: ['client'],
+      order: { lastStampDate: 'DESC' },
+    });
+
+    // Obtener conteo de canjes por cliente
+    const redemptionsCount = await this.redemptionRepository
+      .createQueryBuilder('redemption')
+      .select('redemption.clientId', 'clientId')
+      .addSelect('COUNT(*)', 'count')
+      .innerJoin('redemption.stamp', 'stamp')
+      .where('stamp.businessId = :businessId', { businessId })
+      .groupBy('redemption.clientId')
+      .getRawMany();
+
+    const redemptionsMap = new Map(
+      redemptionsCount.map((r) => [r.clientId, parseInt(r.count)]),
+    );
+
+    const clients = clientCards.map((card) => ({
+      id: card.client.id,
+      firstName: card.client.firstName,
+      lastName: card.client.lastName,
+      email: card.client.email,
+      profilePicture: card.client.profilePicture,
+      totalStamps: card.totalStamps,
+      availableStamps: card.availableStamps,
+      usedStamps: card.usedStamps,
+      level: card.level,
+      lastStampDate: card.lastStampDate,
+      totalRedemptions: redemptionsMap.get(card.clientId) || 0,
+      createdAt: card.createdAt,
+    }));
+
+    return {
+      clients,
+      total: clients.length,
+    };
   }
 }

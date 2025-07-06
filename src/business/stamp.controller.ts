@@ -35,7 +35,6 @@ import {
 @ApiBearerAuth()
 export class StampController {
   constructor(private readonly stampService: StampService) {}
-
   @Post('quick')
   @ApiOperation({
     summary: '⚡ Generar código rápido por valor de venta',
@@ -129,7 +128,7 @@ export class StampController {
     @Request() req: any,
     @Body() createStampDto: CreateStampDto,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    const businessId = req.user.businessId || req.user.id;
+    const businessId = req.user.userId;
     const stamp = await this.stampService.createStamp(
       businessId,
       createStampDto,
@@ -142,7 +141,7 @@ export class StampController {
     };
   }
 
-  @Get()
+  @Get('get-history')
   @ApiOperation({
     summary: '📋 Obtener historial de sellos',
     description:
@@ -187,22 +186,170 @@ export class StampController {
     },
   })
   async getStamps(
-    @Request() req: any,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Request() req: { user: { businessId?: number; userId?: number } },
+    @Query('page', ParseIntPipe) page: number = 1,
+    @Query('limit', ParseIntPipe) limit: number = 10,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    const businessId = req.user.businessId || req.user.id;
-    const result = await this.stampService.getStampsByBusiness(
-      businessId,
-      page,
-      limit,
-    );
+    try {
+      const businessId = req.user.userId;
+      if (!businessId) {
+        throw new Error('Business ID not found in user context');
+      }
 
-    return {
-      success: true,
-      data: result,
-      message: 'Sellos obtenidos exitosamente',
-    };
+      const result = await this.stampService.getStampsByBusiness(
+        businessId,
+        page,
+        limit,
+      );
+
+      return {
+        success: true,
+        data: result,
+        message: 'Sellos obtenidos exitosamente',
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        data: null,
+        message: 'Error al obtener los sellos',
+      };
+    }
+  }
+
+  @Get('get-client-cards')
+  @ApiOperation({
+    summary: '📋 Obtener todas las tarjetas de fidelización',
+    description:
+      'Obtiene todas las tarjetas de fidelización del negocio con paginación.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Número de página (por defecto: 1)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Elementos por página (por defecto: 10)',
+    example: 10,
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Tarjetas de fidelización obtenidas exitosamente',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          cards: [
+            {
+              id: 1,
+              totalStamps: 12,
+              availableStamps: 12,
+              usedStamps: 0,
+              level: 1,
+              lastStampDate: '2024-01-15T10:30:00.000Z',
+              client: {
+                id: 1,
+                name: 'Juan Pérez',
+                email: 'juan.perez@example.com',
+                phone: '1234567890',
+              },
+            },
+          ],
+          total: 50,
+          page: 1,
+          totalPages: 5,
+        },
+        message: 'Tarjetas de fidelización obtenidas exitosamente',
+      },
+    },
+  })
+  async getClientCards(
+    @Request() req: any,
+    //@Query('page', ParseIntPipe) page: number = 1,
+    //@Query('limit', ParseIntPipe) limit: number = 10,
+  ): Promise<{ success: boolean; data: any; message: string }> {
+    try {
+      const businessId = req.user.userId;
+      const clientCards =
+        await this.stampService.getClientCardsByBusiness(businessId);
+      return {
+        success: true,
+        data: {
+          cards: clientCards,
+          //total: clientCards.length,
+          //page: page,
+          //totalPages: Math.ceil(clientCards.length / limit),
+        },
+        message: 'Tarjetas de fidelización obtenidas exitosamente',
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        data: null,
+        message: 'Error al obtener las tarjetas de fidelización',
+      };
+    }
+  }
+
+  @Get('clients')
+  @ApiOperation({
+    summary: '👥 Obtener lista de clientes del negocio',
+    description:
+      'Obtiene todos los clientes que han interactuado con el negocio, incluyendo información de fidelización.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Lista de clientes obtenida exitosamente',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          clients: [
+            {
+              id: 1,
+              firstName: 'Juan',
+              lastName: 'Pérez',
+              email: 'juan.perez@example.com',
+              profilePicture: 'https://example.com/avatar.jpg',
+              totalStamps: 25,
+              availableStamps: 15,
+              usedStamps: 10,
+              level: 3,
+              lastStampDate: '2024-01-15T10:30:00.000Z',
+              totalRedemptions: 8,
+              createdAt: '2024-01-01T00:00:00.000Z',
+            },
+          ],
+          total: 1,
+        },
+        message: 'Clientes obtenidos exitosamente',
+      },
+    },
+  })
+  async getBusinessClients(
+    @Request() req: any,
+  ): Promise<{ success: boolean; data: any; message: string }> {
+    try {
+      const businessId = req.user.userId;
+      const result = await this.stampService.getBusinessClients(businessId);
+
+      return {
+        success: true,
+        data: result,
+        message: 'Clientes obtenidos exitosamente',
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        data: null,
+        message: 'Error al obtener los clientes',
+      };
+    }
   }
 
   @Get('statistics')
@@ -231,7 +378,7 @@ export class StampController {
   async getStampStatistics(
     @Request() req: any,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    const businessId = req.user.businessId || req.user.id;
+    const businessId = req.user.userId;
     const statistics = await this.stampService.getStampStatistics(businessId);
 
     return {
@@ -310,7 +457,7 @@ export class StampController {
     @Request() req: any,
     @Param('id', ParseIntPipe) stampId: number,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    const businessId = req.user.businessId || req.user.id;
+    const businessId = req.user.userId;
     const stamp = await this.stampService.cancelStamp(stampId, businessId);
 
     return {

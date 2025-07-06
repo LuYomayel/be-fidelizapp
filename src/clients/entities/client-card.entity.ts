@@ -9,7 +9,7 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
-import { IClientCard } from '@shared';
+import { IClientCard, StampRedemption } from '@shared';
 import { Client } from './client.entity';
 import { Business } from '../../business/entities/business.entity';
 
@@ -57,5 +57,5 @@ export class ClientCard implements IClientCard {
   business: Business;
 
   @OneToMany('StampRedemption', 'clientCard')
-  redemptions: any[];
+  redemptions: StampRedemption[];
 }
