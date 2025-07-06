@@ -93,7 +93,7 @@ export class RewardController {
     },
   ): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       const reward = await this.rewardService.createReward(
         businessId,
         rewardData,
@@ -117,7 +117,7 @@ export class RewardController {
   @ApiResponse({ status: 200, description: 'Lista de recompensas' })
   async getBusinessRewards(@Request() req): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       const rewards = await this.rewardService.getBusinessRewards(businessId);
 
       return {
@@ -155,7 +155,7 @@ export class RewardController {
     },
   ): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       const reward = await this.rewardService.updateReward(
         businessId,
         rewardId,
@@ -186,7 +186,7 @@ export class RewardController {
     @Param('rewardId', ParseIntPipe) rewardId: number,
   ): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       await this.rewardService.deleteReward(businessId, rewardId);
 
       return {
@@ -307,7 +307,7 @@ export class RewardController {
     @Request() req,
   ): Promise<CustomApiResponse<IRedemptionDashboard>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       const dashboard =
         await this.rewardService.getRedemptionDashboard(businessId);
 
@@ -355,7 +355,7 @@ export class RewardController {
     @Body() body: { deliveredBy: string; notes?: string },
   ): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       const deliveryData: IDeliverRedemptionDto = {
         redemptionId,
         deliveredBy: body.deliveredBy,
@@ -394,7 +394,7 @@ export class RewardController {
     @Param('redemptionCode') redemptionCode: string,
   ): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       const redemption = await this.rewardService.findRedemptionByCode(
         businessId,
         redemptionCode,
@@ -532,7 +532,7 @@ export class RewardController {
     @Query('rewardId') rewardId?: string,
   ): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
 
       const filters: IRedemptionFilters = {
         page: parseInt(page),
@@ -566,7 +566,7 @@ export class RewardController {
   @ApiResponse({ status: 200, description: 'Estadísticas de recompensas' })
   async getRewardStatistics(@Request() req): Promise<CustomApiResponse<any>> {
     try {
-      const businessId = req.user.businessId || req.user.id;
+      const businessId = req.user.userId;
       const statistics =
         await this.rewardService.getRewardStatistics(businessId);
 
