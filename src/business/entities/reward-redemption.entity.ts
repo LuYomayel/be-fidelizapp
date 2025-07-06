@@ -49,7 +49,7 @@ export class RewardRedemption {
   @Column({ name: 'stamps_after', type: 'int' })
   stampsAfter: number; // Sellos después del canje
 
-  @Column({ name: 'redemption_code', length: 10, unique: true })
+  @Column({ name: 'redemption_code', length: 10 })
   redemptionCode: string; // Código único para mostrar al negocio
 
   @Column({
