@@ -5,16 +5,19 @@ import {
   IsString,
   IsNumber,
   IsDateString,
+  IsDate,
   Length,
   Min,
   Max,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ICreateStampDto,
   IRedeemStampDto,
   StampType,
   PurchaseType,
+  RedemptionStatus,
 } from '@shared';
 
 export class CreateStampDto implements ICreateStampDto {
@@ -181,4 +184,74 @@ export class RedeemStampResponseDto {
 
   @ApiProperty({ description: 'Sellos ganados' })
   stampsEarned: number;
+}
+
+export class RedemptionFiltersDto {
+  @ApiPropertyOptional({
+    description: 'Estado de la redención',
+    enum: RedemptionStatus,
+  })
+  @IsOptional()
+  @IsEnum(RedemptionStatus)
+  status?: RedemptionStatus;
+
+  @ApiPropertyOptional({
+    description: 'Fecha de inicio para filtrar',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value ? new Date(value) : undefined))
+  @IsDate()
+  dateFrom?: Date;
+
+  @ApiPropertyOptional({
+    description: 'Fecha de fin para filtrar',
+    example: '2024-12-31T23:59:59.000Z',
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value ? new Date(value) : undefined))
+  @IsDate()
+  dateTo?: Date;
+
+  @ApiPropertyOptional({
+    description: 'ID del cliente',
+    example: 1,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
+  @IsNumber()
+  clientId?: number;
+
+  @ApiPropertyOptional({
+    description: 'ID de la recompensa',
+    example: 1,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
+  @IsNumber()
+  rewardId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Número de página',
+    example: 1,
+    minimum: 1,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
+  @IsNumber()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({
+    description: 'Límite de elementos por página',
+    example: 10,
+    minimum: 1,
+    maximum: 100,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }

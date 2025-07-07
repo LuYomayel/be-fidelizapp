@@ -8,6 +8,8 @@ import {
   Request,
   ParseIntPipe,
   HttpStatus,
+  Query,
+  ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +26,7 @@ import {
   ClientCardResponseDto,
   RedeemStampResponseDto,
 } from '../common/dto/stamp.dto';
+import { RedemptionFiltersDto } from '../common/dto/stamp.dto';
 
 @ApiTags('🎯 Sistema de Tarjetas - Cliente')
 @Controller('client-cards')
@@ -164,6 +167,73 @@ export class ClientCardController {
     };
   }
 
+  @Get('history')
+  @ApiOperation({
+    summary: '📊 Historial de canjes general',
+    description:
+      'Obtiene el historial completo de canjes realizados por el cliente en todos los negocios.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Historial obtenido exitosamente',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          redemptions: [
+            {
+              id: 1,
+              stampsEarned: 2,
+              redeemedAt: '2024-01-15T10:30:00.000Z',
+              stamp: {
+                id: 1,
+                code: '123456',
+                description: 'Café grande',
+                stampValue: 2,
+                business: {
+                  id: 1,
+                  businessName: 'Cafetería La Esquina',
+                  logoPath: '/uploads/logos/logo-123.jpg',
+                  type: 'Cafeteria',
+                },
+              },
+            },
+          ],
+          total: 1,
+          page: 1,
+          totalPages: 1,
+        },
+        message: 'Historial obtenido exitosamente',
+      },
+    },
+  })
+  async getRedemptionHistory(
+    @Request() req: any,
+    @Query(new ValidationPipe({ transform: true }))
+    filters: RedemptionFiltersDto,
+  ): Promise<{ success: boolean; data: any; message: string }> {
+    try {
+      console.log('filters', filters);
+      const clientId = req.user.userId;
+      const history = await this.stampService.getRedemptionHistory(
+        clientId,
+        filters,
+      );
+
+      return {
+        success: true,
+        data: history,
+        message: 'Historial obtenido exitosamente',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        message: 'Error al obtener el historial de canjes',
+      };
+    }
+  }
+
   @Get(':businessId')
   @ApiOperation({
     summary: '🏪 Obtener tarjeta por negocio',
@@ -238,12 +308,12 @@ export class ClientCardController {
       },
     },
   })
-  async getRedemptionHistory(
+  async getRedemptionHistoryByBusiness(
     @Request() req: any,
     @Param('businessId', ParseIntPipe) businessId: number,
   ): Promise<{ success: boolean; data: any; message: string }> {
     const clientId = req.user.userId;
-    const history = await this.stampService.getRedemptionHistory(
+    const history = await this.stampService.getRedemptionHistoryByBusiness(
       clientId,
       businessId,
     );

@@ -4,8 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { StampStatus, StampType } from '@shared';
+import {
+  FindOptionsWhere,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
+import { IRedemptionFilters, StampStatus, StampType } from '@shared';
 import { Stamp } from './entities/stamp.entity';
 import { Business } from './entities/business.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
@@ -398,7 +403,7 @@ export class StampService {
   /**
    * Obtiene el historial de canjes de un cliente para un negocio
    */
-  async getRedemptionHistory(
+  async getRedemptionHistoryByBusiness(
     clientId: number,
     businessId: number,
   ): Promise<any[]> {
@@ -425,6 +430,49 @@ export class StampService {
         stampType: redemption.stamp.stampType,
       },
     }));
+  }
+
+  /**
+   * Obtiene el historial de canjes de un cliente paginado
+   */
+  async getRedemptionHistory(
+    clientId: number,
+    filters: IRedemptionFilters,
+  ): Promise<{
+    redemptions: StampRedemption[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    try {
+      const page = filters.page || 1;
+      const limit = filters.limit || 10;
+
+      // Obtener el total de registros
+      const total = await this.redemptionRepository.count({
+        where: { clientId },
+      });
+      console.log('page', page, 'limit', limit, 'total', total);
+      // Obtener los registros paginados
+      const redemptions = await this.redemptionRepository.find({
+        where: { clientId },
+        relations: ['stamp', 'stamp.business'],
+        order: { redeemedAt: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+
+      return {
+        redemptions,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        'Error al obtener el historial de canjes: ' + error.message,
+      );
+    }
   }
 
   /**
