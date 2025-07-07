@@ -28,8 +28,8 @@ export class Client {
   @Column({ nullable: true })
   googleId?: string;
 
-  @Column({ nullable: true, length: 1024 })
-  profilePicture?: string;
+  @Column({ type: 'text', nullable: true })
+  profilePicture: string;
 
   @Column({
     type: 'enum',
