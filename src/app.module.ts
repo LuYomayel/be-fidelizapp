@@ -14,6 +14,7 @@ import { Reward } from './business/entities/reward.entity';
 import { RewardRedemption } from './business/entities/reward-redemption.entity';
 import { ClientCard } from './clients/entities/client-card.entity';
 import { StampRedemption } from './clients/entities/stamp-redemption.entity';
+import { VerificationCode } from './clients/entities/verification-code.entity';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { StampRedemption } from './clients/entities/stamp-redemption.entity';
             RewardRedemption,
             ClientCard,
             StampRedemption,
+            VerificationCode,
           ],
           synchronize: true, // Solo para desarrollo
           logging: false,

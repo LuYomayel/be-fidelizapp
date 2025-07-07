@@ -3,14 +3,15 @@ import {
   Get,
   Post,
   Body,
-  Put,
+  Patch,
   Param,
   Delete,
-  ValidationPipe,
-  UsePipes,
   UseGuards,
-  ParseIntPipe,
+  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
 import {
   CreateClientDto,
@@ -18,20 +19,10 @@ import {
   LoginClientDto,
 } from '../common/dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
-  ApiParam,
-  ApiBearerAuth,
-  ApiUnauthorizedResponse,
-  ApiNotFoundResponse,
-} from '@nestjs/swagger';
+import { LocalAuthGuard } from '../auth/local-auth.guard';
 
 @ApiTags('clients')
 @Controller('clients')
-@UsePipes(new ValidationPipe())
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 
@@ -43,11 +34,16 @@ export class ClientsController {
   @ApiResponse({ status: 409, description: 'El email ya está registrado' })
   async create(@Body() createClientDto: CreateClientDto) {
     try {
-      const client = await this.clientsService.create(createClientDto);
+      const result = await this.clientsService.create(createClientDto);
       return {
         success: true,
-        data: client,
-        message: 'Cliente registrado exitosamente',
+        data: {
+          client: result.client,
+          requiresVerification: result.requiresVerification,
+        },
+        message: result.requiresVerification
+          ? 'Cliente registrado. Verifica tu email para completar el registro.'
+          : 'Cliente registrado exitosamente',
       };
     } catch (error: any) {
       console.log(error);
@@ -62,147 +58,211 @@ export class ClientsController {
     }
   }
 
-  @Post('login')
-  @ApiOperation({ summary: 'Login de cliente' })
-  @ApiBody({ type: LoginClientDto })
-  @ApiResponse({ status: 200, description: 'Login exitoso' })
-  @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
-  async login(@Body() loginClientDto: LoginClientDto) {
+  @Post('verify-email')
+  @ApiOperation({ summary: 'Verificar email con código' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+        code: { type: 'string', minLength: 6, maxLength: 6 },
+      },
+      required: ['email', 'code'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Email verificado correctamente' })
+  @ApiResponse({ status: 400, description: 'Código inválido o expirado' })
+  async verifyEmail(@Body() body: { email: string; code: string }) {
     try {
-      const client = await this.clientsService.validateClient(
-        loginClientDto.email,
-        loginClientDto.password,
+      const result = await this.clientsService.verifyEmail(
+        body.email,
+        body.code,
       );
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al verificar el email',
+      };
+    }
+  }
 
-      if (!client) {
+  @Post('resend-verification')
+  @ApiOperation({ summary: 'Reenviar código de verificación' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+      },
+      required: ['email'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Código de verificación reenviado' })
+  @ApiResponse({ status: 404, description: 'Cliente no encontrado' })
+  async resendVerification(@Body() body: { email: string }) {
+    try {
+      await this.clientsService.sendVerificationCode(body.email);
+      return {
+        success: true,
+        message: 'Código de verificación reenviado',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al reenviar el código',
+      };
+    }
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Solicitar código de recuperación de contraseña' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+      },
+      required: ['email'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Código de recuperación enviado' })
+  async forgotPassword(@Body() body: { email: string }) {
+    try {
+      const result = await this.clientsService.sendPasswordResetCode(
+        body.email,
+      );
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al enviar el código de recuperación',
+      };
+    }
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Restablecer contraseña con código' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+        code: { type: 'string', minLength: 6, maxLength: 6 },
+        newPassword: { type: 'string', minLength: 6 },
+      },
+      required: ['email', 'code', 'newPassword'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña restablecida correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Código inválido o expirado' })
+  async resetPassword(
+    @Body() body: { email: string; code: string; newPassword: string },
+  ) {
+    try {
+      const result = await this.clientsService.resetPassword(
+        body.email,
+        body.code,
+        body.newPassword,
+      );
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al restablecer la contraseña',
+      };
+    }
+  }
+
+  @UseGuards(LocalAuthGuard)
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Iniciar sesión de cliente' })
+  @ApiBody({ type: LoginClientDto })
+  @ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
+  @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
+  async login(@Request() req) {
+    try {
+      const client = req.user;
+
+      // Verificar si el email está verificado
+      if (!client.emailVerified) {
         return {
           success: false,
           data: null,
-          message: 'Credenciales inválidas',
+          message: 'Debes verificar tu email antes de iniciar sesión',
+          requiresVerification: true,
+          email: client.email,
         };
       }
 
-      // Generar token JWT
       const token = this.clientsService.generateToken(client);
-
       return {
         success: true,
         data: {
-          client: {
-            id: client.id,
-            email: client.email,
-            firstName: client.firstName,
-            lastName: client.lastName,
-            provider: client.provider,
-          },
+          client,
           token,
           tokens: {
             accessToken: token,
-            refreshToken: token, // Por ahora usar el mismo token
+            refreshToken: token, // Por ahora usamos el mismo token
           },
         },
-        message: 'Login exitoso',
+        message: 'Inicio de sesión exitoso',
       };
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
       return {
         success: false,
         data: null,
-        message: 'Error al iniciar sesión',
+        message: error.message || 'Error al iniciar sesión',
       };
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Obtener todos los clientes' })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de clientes obtenida exitosamente',
-  })
-  @ApiUnauthorizedResponse({ description: 'No autorizado' })
-  async findAll() {
-    try {
-      const clients = await this.clientsService.findAll();
-      return { success: true, data: clients };
-    } catch (error) {
-      console.log(error);
-      return {
-        success: false,
-        data: null,
-        message: 'Error al obtener los clientes',
-      };
-    }
+  @ApiResponse({ status: 200, description: 'Lista de clientes' })
+  findAll() {
+    return this.clientsService.findAll();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Obtener un cliente por ID' })
-  @ApiParam({ name: 'id', description: 'ID del cliente' })
-  @ApiResponse({ status: 200, description: 'Cliente obtenido exitosamente' })
-  @ApiNotFoundResponse({ description: 'Cliente no encontrado' })
-  @ApiUnauthorizedResponse({ description: 'No autorizado' })
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    try {
-      const client = await this.clientsService.findOne(id);
-      return { success: true, data: client };
-    } catch (error) {
-      console.log(error);
-      return {
-        success: false,
-        data: null,
-        message: 'Error al obtener el cliente',
-      };
-    }
+  @ApiResponse({ status: 200, description: 'Cliente encontrado' })
+  @ApiResponse({ status: 404, description: 'Cliente no encontrado' })
+  findOne(@Param('id') id: string) {
+    return this.clientsService.findOne(+id);
   }
 
-  @Put(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @Patch(':id')
   @ApiOperation({ summary: 'Actualizar un cliente' })
-  @ApiParam({ name: 'id', description: 'ID del cliente' })
   @ApiBody({ type: UpdateClientDto })
-  @ApiResponse({ status: 200, description: 'Cliente actualizado exitosamente' })
-  @ApiNotFoundResponse({ description: 'Cliente no encontrado' })
-  @ApiUnauthorizedResponse({ description: 'No autorizado' })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateClientDto: UpdateClientDto,
-  ) {
-    try {
-      const client = await this.clientsService.update(id, updateClientDto);
-      return {
-        success: true,
-        data: client,
-        message: 'Cliente actualizado exitosamente',
-      };
-    } catch (error) {
-      console.log(error);
-      return {
-        success: false,
-        data: null,
-        message: 'Error al actualizar el cliente',
-      };
-    }
+  @ApiResponse({ status: 200, description: 'Cliente actualizado' })
+  @ApiResponse({ status: 404, description: 'Cliente no encontrado' })
+  update(@Param('id') id: string, @Body() updateClientDto: UpdateClientDto) {
+    return this.clientsService.update(+id, updateClientDto);
   }
 
-  @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @Delete(':id')
   @ApiOperation({ summary: 'Eliminar un cliente' })
-  @ApiParam({ name: 'id', description: 'ID del cliente' })
-  @ApiResponse({ status: 200, description: 'Cliente eliminado exitosamente' })
-  @ApiNotFoundResponse({ description: 'Cliente no encontrado' })
-  @ApiUnauthorizedResponse({ description: 'No autorizado' })
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    try {
-      await this.clientsService.remove(id);
-      return { success: true, message: 'Cliente eliminado exitosamente' };
-    } catch (error) {
-      console.log(error);
-      return { success: false, message: 'Error al eliminar el cliente' };
-    }
+  @ApiResponse({ status: 200, description: 'Cliente eliminado' })
+  @ApiResponse({ status: 404, description: 'Cliente no encontrado' })
+  remove(@Param('id') id: string) {
+    return this.clientsService.remove(+id);
   }
 }

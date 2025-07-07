@@ -28,7 +28,7 @@ export class Client {
   @Column({ nullable: true })
   googleId?: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 1024 })
   profilePicture?: string;
 
   @Column({
@@ -37,6 +37,9 @@ export class Client {
     default: UserProvider.EMAIL,
   })
   provider: UserProvider;
+
+  @Column({ default: false })
+  emailVerified: boolean;
 
   @Column({ default: true })
   isActive: boolean;

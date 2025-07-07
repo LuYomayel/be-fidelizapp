@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,6 +12,9 @@ import { Client } from './entities/client.entity';
 import { CreateClientDto, UpdateClientDto } from '../common/dto';
 import { UserProvider } from '@shared';
 import { GoogleUser } from '../auth/google.strategy';
+import { EmailService } from '../common/services/email.service';
+import { VerificationCodeService } from '../common/services/verification-code.service';
+import { VerificationCodeType } from './entities/verification-code.entity';
 
 @Injectable()
 export class ClientsService {
@@ -18,31 +22,166 @@ export class ClientsService {
     @InjectRepository(Client)
     private clientRepository: Repository<Client>,
     private jwtService: JwtService,
+    private emailService: EmailService,
+    private verificationCodeService: VerificationCodeService,
   ) {}
 
-  async create(createClientDto: CreateClientDto): Promise<Client> {
+  async create(
+    createClientDto: CreateClientDto,
+  ): Promise<{ client: Client; requiresVerification: boolean }> {
     try {
       const existingClient = await this.clientRepository.findOne({
         where: { email: createClientDto.email },
       });
-      console.log(existingClient);
+
       if (existingClient) {
+        // Si el cliente existe pero no ha verificado su email
+        if (!existingClient.emailVerified) {
+          return {
+            client: existingClient,
+            requiresVerification: true,
+          };
+        }
         throw new ConflictException('El email ya está registrado');
       }
 
       const hashedPassword = await bcrypt.hash(createClientDto.password, 10);
-      console.log(hashedPassword);
       const client = this.clientRepository.create({
         ...createClientDto,
         password: hashedPassword,
         provider: UserProvider.EMAIL,
+        emailVerified: false,
       });
-      console.log(client);
-      return await this.clientRepository.save(client);
+
+      const savedClient = await this.clientRepository.save(client);
+
+      // Enviar código de verificación
+      await this.sendVerificationCode(savedClient.email, savedClient.id);
+
+      return {
+        client: savedClient,
+        requiresVerification: true,
+      };
     } catch (error) {
       console.log(error);
-      throw new ConflictException(error);
+      throw error;
     }
+  }
+
+  async sendVerificationCode(email: string, clientId?: number): Promise<void> {
+    const client = await this.findByEmail(email);
+    if (!client) {
+      throw new NotFoundException('Cliente no encontrado');
+    }
+
+    if (client.emailVerified) {
+      throw new BadRequestException('El email ya está verificado');
+    }
+
+    const verificationCode =
+      await this.verificationCodeService.createVerificationCode(
+        email,
+        VerificationCodeType.EMAIL_VERIFICATION,
+        clientId,
+      );
+
+    await this.emailService.sendVerificationEmail(
+      email,
+      verificationCode.code,
+      `${client.firstName} ${client.lastName}`,
+    );
+  }
+
+  async verifyEmail(
+    email: string,
+    code: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const validation = await this.verificationCodeService.validateCode(
+      email,
+      code,
+      VerificationCodeType.EMAIL_VERIFICATION,
+    );
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.message,
+      };
+    }
+
+    // Marcar el email como verificado
+    await this.clientRepository.update({ email }, { emailVerified: true });
+
+    return {
+      success: true,
+      message: 'Email verificado correctamente',
+    };
+  }
+
+  async sendPasswordResetCode(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const client = await this.findByEmail(email);
+    if (!client) {
+      // Por seguridad, no revelamos si el email existe o no
+      return {
+        success: true,
+        message: 'Si el email existe, recibirás un código de recuperación',
+      };
+    }
+
+    const verificationCode =
+      await this.verificationCodeService.createVerificationCode(
+        email,
+        VerificationCodeType.PASSWORD_RESET,
+        client.id,
+      );
+
+    await this.emailService.sendPasswordResetEmail(
+      email,
+      verificationCode.code,
+      `${client.firstName} ${client.lastName}`,
+    );
+
+    return {
+      success: true,
+      message: 'Código de recuperación enviado',
+    };
+  }
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const validation = await this.verificationCodeService.validateCode(
+      email,
+      code,
+      VerificationCodeType.PASSWORD_RESET,
+    );
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.message,
+      };
+    }
+
+    const client = await this.findByEmail(email);
+    if (!client) {
+      return {
+        success: false,
+        message: 'Cliente no encontrado',
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.clientRepository.update({ email }, { password: hashedPassword });
+
+    return {
+      success: true,
+      message: 'Contraseña actualizada correctamente',
+    };
   }
 
   async createGoogleClient(googleUser: GoogleUser): Promise<Client> {
@@ -57,6 +196,7 @@ export class ClientsService {
         googleId: googleId,
         profilePicture: googleUser.picture,
         provider: UserProvider.GOOGLE,
+        emailVerified: true, // Los usuarios de Google ya tienen el email verificado
         isActive: true,
       });
 
@@ -86,6 +226,7 @@ export class ClientsService {
         client.provider = UserProvider.GOOGLE;
         client.googleId = googleUser.accessToken.substring(0, 50);
         client.profilePicture = googleUser.picture;
+        client.emailVerified = true; // Los usuarios de Google ya tienen el email verificado
         client = await this.clientRepository.save(client);
         console.log('🔄 Cliente actualizado para Google OAuth');
       }

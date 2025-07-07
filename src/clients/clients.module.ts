@@ -3,31 +3,21 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientsService } from './clients.service';
 import { ClientsController } from './clients.controller';
-import { ClientCardController } from './client-card.controller';
 import { Client } from './entities/client.entity';
-import { ClientCard } from './entities/client-card.entity';
-import { StampRedemption } from './entities/stamp-redemption.entity';
-import { StampService } from '../business/stamp.service';
-import { Business } from '../business/entities/business.entity';
-import { Stamp } from '../business/entities/stamp.entity';
-import { ConfigService } from '@nestjs/config';
+import { VerificationCode } from './entities/verification-code.entity';
+import { EmailService } from '../common/services/email.service';
+import { VerificationCodeService } from '../common/services/verification-code.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Client,
-      ClientCard,
-      StampRedemption,
-      Business,
-      Stamp,
-    ]),
+    TypeOrmModule.forFeature([Client, VerificationCode]),
     JwtModule.register({
-      secret: new ConfigService().get<string>('JWT_SECRET') || 'secretKey',
+      secret: process.env.JWT_SECRET || 'fallback-secret-key',
       signOptions: { expiresIn: '24h' },
     }),
   ],
-  providers: [ClientsService, StampService],
-  controllers: [ClientsController, ClientCardController],
+  controllers: [ClientsController],
+  providers: [ClientsService, EmailService, VerificationCodeService],
   exports: [ClientsService],
 })
 export class ClientsModule {}
