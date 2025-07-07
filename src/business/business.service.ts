@@ -85,20 +85,122 @@ export class BusinessService {
       throw new NotFoundException('Negocio no encontrado');
     }
 
-    // Total de sellos generados
+    // Fechas para comparación mes actual vs mes anterior
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+    );
+    const previousMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1,
+    );
+    const previousMonthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+    );
+
+    // Total de sellos generados (mes actual)
     const totalStamps = await this.stampRepository.count({
       where: { businessId: business.id },
     });
+
+    // Sellos del mes actual
+    const stampsCurrentMonth = await this.stampRepository.count({
+      where: {
+        businessId: business.id,
+        createdAt: Between(currentMonthStart, currentMonthEnd),
+      },
+    });
+
+    // Sellos del mes anterior
+    const stampsPreviousMonth = await this.stampRepository.count({
+      where: {
+        businessId: business.id,
+        createdAt: Between(previousMonthStart, previousMonthEnd),
+      },
+    });
+
+    // Calcular crecimiento de sellos
+    const stampsGrowth =
+      stampsPreviousMonth > 0
+        ? ((stampsCurrentMonth - stampsPreviousMonth) / stampsPreviousMonth) *
+          100
+        : stampsCurrentMonth > 0
+          ? 100
+          : 0;
 
     // Clientes activos (que tienen tarjeta)
     const activeClients = await this.clientCardRepository.count({
       where: { businessId: business.id },
     });
 
+    // Clientes nuevos del mes actual
+    const clientsCurrentMonth = await this.clientCardRepository.count({
+      where: {
+        businessId: business.id,
+        createdAt: Between(currentMonthStart, currentMonthEnd),
+      },
+    });
+
+    // Clientes nuevos del mes anterior
+    const clientsPreviousMonth = await this.clientCardRepository.count({
+      where: {
+        businessId: business.id,
+        createdAt: Between(previousMonthStart, previousMonthEnd),
+      },
+    });
+
+    // Calcular crecimiento de clientes
+    const clientsGrowth =
+      clientsPreviousMonth > 0
+        ? ((clientsCurrentMonth - clientsPreviousMonth) /
+            clientsPreviousMonth) *
+          100
+        : clientsCurrentMonth > 0
+          ? 100
+          : 0;
+
     // Recompensas canjeadas (CORRECTO: cuenta canjes de recompensas, no sellos)
     const rewardsExchanged = await this.rewardRedemptionRepository.count({
       where: { businessId: business.id },
     });
+
+    // Recompensas del mes actual
+    const rewardsCurrentMonth = await this.rewardRedemptionRepository.count({
+      where: {
+        businessId: business.id,
+        redeemedAt: Between(currentMonthStart, currentMonthEnd),
+      },
+    });
+
+    // Recompensas del mes anterior
+    const rewardsPreviousMonth = await this.rewardRedemptionRepository.count({
+      where: {
+        businessId: business.id,
+        redeemedAt: Between(previousMonthStart, previousMonthEnd),
+      },
+    });
+
+    // Calcular crecimiento de recompensas
+    const rewardsGrowth =
+      rewardsPreviousMonth > 0
+        ? ((rewardsCurrentMonth - rewardsPreviousMonth) /
+            rewardsPreviousMonth) *
+          100
+        : rewardsCurrentMonth > 0
+          ? 100
+          : 0;
 
     // Calcular retención de clientes: (Clientes registrados en el año - Clientes Nuevos / 100) * 100
     const currentYear = new Date().getFullYear();
@@ -125,6 +227,40 @@ export class BusinessService {
           100
         : 0;
 
+    // Calcular retención del mes anterior para comparación
+    const previousYearStart = new Date(currentYear - 1, 0, 1);
+    const previousYearEnd = new Date(currentYear - 1, 11, 31, 23, 59, 59);
+
+    const totalClientsPreviousYear = await this.clientCardRepository.count({
+      where: {
+        businessId: business.id,
+        createdAt: Between(previousYearStart, previousYearEnd),
+      },
+    });
+
+    const newClientsPreviousYear = await this.clientCardRepository.count({
+      where: {
+        businessId: business.id,
+        createdAt: Between(previousYearStart, previousYearEnd),
+      },
+    });
+
+    const retentionPreviousYear =
+      totalClientsPreviousYear > 0
+        ? ((totalClientsPreviousYear - newClientsPreviousYear) /
+            totalClientsPreviousYear) *
+          100
+        : 0;
+
+    // Calcular crecimiento de retención
+    const retentionGrowth =
+      retentionPreviousYear > 0
+        ? ((clientRetention - retentionPreviousYear) / retentionPreviousYear) *
+          100
+        : clientRetention > 0
+          ? 100
+          : 0;
+
     // Clientes recientes
     const recentClients = await this.clientCardRepository.find({
       where: { businessId: business.id },
@@ -143,6 +279,11 @@ export class BusinessService {
       totalRedemptions: 0,
       pendingRedemptions: 0,
       recentRedemptions: [],
+      // Porcentajes de crecimiento
+      stampsGrowth: Math.round(stampsGrowth * 10) / 10, // Redondear a 1 decimal
+      clientsGrowth: Math.round(clientsGrowth * 10) / 10,
+      rewardsGrowth: Math.round(rewardsGrowth * 10) / 10,
+      retentionGrowth: Math.round(retentionGrowth * 10) / 10,
     };
   }
 

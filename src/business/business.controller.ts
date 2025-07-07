@@ -203,11 +203,54 @@ export class BusinessController {
         data: {
           type: 'object',
           properties: {
-            totalStamps: { type: 'number' },
-            activeClients: { type: 'number' },
-            rewardsExchanged: { type: 'number' },
-            clientRetention: { type: 'number' },
-            recentClients: { type: 'array' },
+            totalStamps: {
+              type: 'number',
+              description: 'Total de sellos generados',
+            },
+            activeClients: {
+              type: 'number',
+              description: 'Número de clientes activos',
+            },
+            rewardsExchanged: {
+              type: 'number',
+              description: 'Total de recompensas canjeadas',
+            },
+            clientRetention: {
+              type: 'number',
+              description: 'Porcentaje de retención de clientes',
+            },
+            recentClients: {
+              type: 'array',
+              description: 'Lista de clientes recientes',
+            },
+            totalRedemptions: {
+              type: 'number',
+              description: 'Total de redenciones',
+            },
+            pendingRedemptions: {
+              type: 'number',
+              description: 'Redenciones pendientes',
+            },
+            recentRedemptions: {
+              type: 'array',
+              description: 'Redenciones recientes',
+            },
+            stampsGrowth: {
+              type: 'number',
+              description: 'Crecimiento de sellos vs mes anterior (%)',
+            },
+            clientsGrowth: {
+              type: 'number',
+              description: 'Crecimiento de clientes vs mes anterior (%)',
+            },
+            rewardsGrowth: {
+              type: 'number',
+              description: 'Crecimiento de recompensas vs mes anterior (%)',
+            },
+            retentionGrowth: {
+              type: 'number',
+              description: 'Crecimiento de retención vs mes anterior (%)',
+            },
           },
         },
         message: { type: 'string' },
