@@ -188,11 +188,16 @@ export class ClientsService {
     try {
       // Extraer googleId del accessToken o usar email como identificador único
       const googleId = googleUser.accessToken.substring(0, 50); // Usar parte del token como ID único
-
+      const fullName = googleUser.firstName.split(' ');
+      const firstName = fullName[0];
+      let lastName = '';
+      if (fullName.length > 1) {
+        lastName = fullName[1];
+      }
       const client = this.clientRepository.create({
         email: googleUser.email,
-        firstName: googleUser.firstName,
-        lastName: googleUser.lastName,
+        firstName: firstName,
+        lastName: lastName,
         googleId: googleId,
         profilePicture: googleUser.picture,
         provider: UserProvider.GOOGLE,
