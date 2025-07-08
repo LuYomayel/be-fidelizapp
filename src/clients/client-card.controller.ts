@@ -157,6 +157,7 @@ export class ClientCardController {
   async getClientCards(
     @Request() req: any,
   ): Promise<{ success: boolean; data: any; message: string }> {
+    console.log('req.user', req.user);
     const clientId = req.user.userId;
     const cards = await this.stampService.getClientCards(clientId);
 

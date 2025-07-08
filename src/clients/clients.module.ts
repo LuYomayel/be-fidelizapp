@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ClientsService } from './clients.service';
@@ -7,6 +7,9 @@ import { Client } from './entities/client.entity';
 import { VerificationCode } from './entities/verification-code.entity';
 import { EmailService } from '../common/services/email.service';
 import { VerificationCodeService } from '../common/services/verification-code.service';
+import { AuthModule } from '../auth/auth.module';
+import { ClientCardController } from './client-card.controller';
+import { BusinessModule } from '../business/business.module';
 
 @Module({
   imports: [
@@ -15,8 +18,10 @@ import { VerificationCodeService } from '../common/services/verification-code.se
       secret: process.env.JWT_SECRET || 'fallback-secret-key',
       signOptions: { expiresIn: '24h' },
     }),
+    forwardRef(() => AuthModule),
+    BusinessModule,
   ],
-  controllers: [ClientsController],
+  controllers: [ClientsController, ClientCardController],
   providers: [ClientsService, EmailService, VerificationCodeService],
   exports: [ClientsService],
 })

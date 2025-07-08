@@ -17,3 +17,24 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     return user;
   }
 }
+
+@Injectable()
+export class LocalClientStrategy extends PassportStrategy(
+  Strategy,
+  'local-client',
+) {
+  constructor(private authService: AuthService) {
+    super({
+      usernameField: 'email', // Usar email en lugar de username
+      passwordField: 'password',
+    });
+  }
+
+  async validate(email: string, password: string): Promise<any> {
+    const client = await this.authService.validateClient(email, password);
+    if (!client) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+    return client;
+  }
+}

@@ -29,6 +29,7 @@ import {
   IDeliverRedemptionDto,
   IRedemptionFilters,
   RedemptionStatus,
+  AuthenticatedRequest,
 } from '@shared';
 
 @ApiTags('rewards')
@@ -112,7 +113,7 @@ export class RewardController {
     }
   }
 
-  @Get()
+  @Get('my-rewards')
   @ApiOperation({ summary: 'Obtener recompensas del negocio' })
   @ApiResponse({ status: 200, description: 'Lista de recompensas' })
   async getBusinessRewards(@Request() req): Promise<CustomApiResponse<any>> {
@@ -304,7 +305,7 @@ export class RewardController {
     },
   })
   async getRedemptionDashboard(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ): Promise<CustomApiResponse<IRedemptionDashboard>> {
     try {
       const businessId = req.user.userId;

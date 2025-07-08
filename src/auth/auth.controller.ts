@@ -56,6 +56,8 @@ export class AuthController {
       const data = this.authService.login({
         username: loginBusinessDto.email,
         userId: 0, // o el valor que corresponda
+        email: loginBusinessDto.email,
+        provider: 'email',
       });
       return { success: true, data, message: 'Login exitoso' };
     } catch (error) {

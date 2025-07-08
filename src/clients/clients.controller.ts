@@ -10,6 +10,8 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
@@ -19,12 +21,18 @@ import {
   LoginClientDto,
 } from '../common/dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { LocalAuthGuard } from '../auth/local-auth.guard';
+import { LocalClientAuthGuard } from '../auth/local-auth.guard';
+import { AuthService } from '../auth/auth.service';
+import { ClientRequest, AuthenticatedRequest } from 'shared';
 
 @ApiTags('clients')
 @Controller('clients')
 export class ClientsController {
-  constructor(private readonly clientsService: ClientsService) {}
+  constructor(
+    private readonly clientsService: ClientsService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
+  ) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Registrar un cliente' })
@@ -186,18 +194,20 @@ export class ClientsController {
     }
   }
 
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(LocalClientAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión de cliente' })
   @ApiBody({ type: LoginClientDto })
   @ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
-  async login(@Request() req) {
+  async login(@Request() req: ClientRequest) {
     try {
+      console.log('req.user', req.user);
       const client = req.user;
 
       // Verificar si el email está verificado
+      /* Por el momento no se verifica el email
       if (!client.emailVerified) {
         return {
           success: false,
@@ -207,16 +217,18 @@ export class ClientsController {
           email: client.email,
         };
       }
+      */
 
-      const token = this.clientsService.generateToken(client);
+      // Usar el método loginClient del AuthService
+      const result = this.authService.loginClient(client);
       return {
         success: true,
         data: {
-          client,
-          token,
+          client: result.user,
+          token: result.access_token,
           tokens: {
-            accessToken: token,
-            refreshToken: token, // Por ahora usamos el mismo token
+            accessToken: result.access_token,
+            refreshToken: result.access_token, // Por ahora usamos el mismo token
           },
         },
         message: 'Inicio de sesión exitoso',
@@ -226,6 +238,29 @@ export class ClientsController {
         success: false,
         data: null,
         message: error.message || 'Error al iniciar sesión',
+      };
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  @ApiOperation({ summary: 'Obtener perfil del cliente autenticado' })
+  @ApiResponse({ status: 200, description: 'Perfil del cliente' })
+  async getProfile(@Request() req: AuthenticatedRequest) {
+    try {
+      console.log('req.user en profile:', req.user);
+      return {
+        success: true,
+        data: {
+          user: req.user,
+        },
+        message: 'Perfil obtenido exitosamente',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        data: null,
+        message: error.message || 'Error al obtener el perfil',
       };
     }
   }

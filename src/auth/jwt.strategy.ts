@@ -2,14 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-
-interface JwtPayload {
-  username: string;
-  sub: number;
-  email?: string;
-  type?: 'business' | 'client';
-  provider?: string;
-}
+import {
+  JwtPayload,
+  ClientUser,
+  BusinessUser,
+  AuthenticatedUser,
+} from 'shared';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -21,25 +19,31 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload) {
+  validate(payload: JwtPayload): AuthenticatedUser {
     // Retornar información completa del usuario basada en el tipo
     if (payload.type === 'client') {
-      return {
+      const clientUser: ClientUser = {
         userId: payload.sub,
         clientId: payload.sub, // Para compatibilidad con endpoints de clientes
         username: payload.username,
         email: payload.email,
+        emailVerified: true, // Los usuarios con JWT ya están verificados
         type: 'client',
         provider: payload.provider,
       };
+      return clientUser;
     } else {
       // Para negocios (business)
-      return {
+      const businessUser: BusinessUser = {
         userId: payload.sub,
         businessId: payload.sub, // Para compatibilidad con endpoints de negocios
         username: payload.username,
         type: 'business',
+        email: payload.email,
+        emailVerified: true,
+        provider: payload.provider,
       };
+      return businessUser;
     }
   }
 }
