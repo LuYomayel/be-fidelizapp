@@ -19,7 +19,10 @@ import { StampRule } from './entities/stamp-rule.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
 import { Client } from '../clients/entities/client.entity';
 import { StampRedemption } from '../clients/entities/stamp-redemption.entity';
-import { ConfigService } from '@nestjs/config';
+
+import { ProfileController } from './profile.controller';
+import { ProfileService } from './profile.service';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [
@@ -35,18 +38,35 @@ import { ConfigService } from '@nestjs/config';
       StampRedemption,
     ]),
     JwtModule.register({
-      secret: new ConfigService().get<string>('JWT_SECRET') || 'secretKey',
+      secret: process.env.JWT_SECRET || 'fallback-secret-key',
       signOptions: { expiresIn: '24h' },
     }),
+    MulterModule.register({
+      dest: './uploads',
+    }),
   ],
-  providers: [BusinessService, StampService, RewardService, StampConfigService],
+  providers: [
+    BusinessService,
+    StampService,
+    RewardService,
+    StampConfigService,
+    ProfileService,
+  ],
   controllers: [
     BusinessController,
     StampController,
     RewardController,
     StampConfigController,
     TestController,
+    ProfileController,
   ],
-  exports: [BusinessService, StampService, RewardService, StampConfigService],
+  exports: [
+    BusinessService,
+    StampService,
+    RewardService,
+    StampConfigService,
+    ProfileService,
+    TypeOrmModule, // Exportar TypeOrmModule para que otros módulos puedan usar los repositorios
+  ],
 })
 export class BusinessModule {}
