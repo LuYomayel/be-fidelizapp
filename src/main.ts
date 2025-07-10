@@ -2,11 +2,21 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as express from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Configuración global
+  // IMPORTANTE: Configurar archivos estáticos ANTES del prefijo global
+  const uploadsPath = join(process.cwd(), 'uploads');
+  console.log('📁 Sirviendo archivos estáticos desde:', uploadsPath);
+
+  // Usar express.static directamente - esto permite /uploads/logos/archivo.png
+  app.use('/uploads', express.static(uploadsPath));
+
+  // Configuración global DESPUÉS de los archivos estáticos
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

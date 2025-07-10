@@ -30,14 +30,16 @@ import {
   BusinessRequest,
   ApiResponse as ApiResponseType,
 } from '@shared';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @ApiTags('Business Profile')
-@Controller('api/business/profile')
+@Controller('business/profile')
 @UseGuards(JwtAuthGuard)
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
-  @Get()
+  @Get('complete')
   @ApiOperation({ summary: 'Obtener perfil del negocio' })
   @ApiResponse({
     status: 200,
@@ -47,6 +49,7 @@ export class ProfileController {
     @Req() req: BusinessRequest,
   ): Promise<ApiResponseType<IBusinessProfile>> {
     try {
+      console.log('req.user', req.user);
       const profile = await this.profileService.getBusinessProfile(
         req.user.businessId,
       );
@@ -66,7 +69,7 @@ export class ProfileController {
     }
   }
 
-  @Put()
+  @Put('update')
   @ApiOperation({ summary: 'Actualizar perfil del negocio' })
   @ApiResponse({
     status: 200,
@@ -114,12 +117,39 @@ export class ProfileController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('logo'))
+  @UseInterceptors(
+    FileInterceptor('logo', {
+      storage: diskStorage({
+        destination: './uploads/logos',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, 'logo-' + uniqueSuffix + extname(file.originalname));
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+          return cb(new Error('Solo se permiten archivos de imagen'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
   async updateLogo(
     @UploadedFile() logo: Express.Multer.File,
-    @Req() req: BusinessRequest,
+    @Req() req: any,
   ): Promise<ApiResponseType<IBusinessProfile>> {
     try {
+      console.log('=== LOGO UPDATE DEBUG ===');
+      console.log('Request headers:', req.headers);
+      console.log('Request body:', req.body);
+      console.log('Uploaded file:', logo);
+      console.log('File fieldname:', logo?.fieldname);
+      console.log('File originalname:', logo?.originalname);
+      console.log('File mimetype:', logo?.mimetype);
+      console.log('File size:', logo?.size);
+      console.log('File buffer length:', logo?.buffer?.length);
+      console.log('========================');
       const profile = await this.profileService.updateBusinessLogo(
         req.user.businessId,
         logo,
@@ -133,7 +163,7 @@ export class ProfileController {
       throw new HttpException(
         {
           success: false,
-          message: 'Error al actualizar el logo',
+          message: error.message || 'Error al actualizar el logo',
           error: error.message,
         },
         HttpStatus.BAD_REQUEST,
@@ -164,7 +194,7 @@ export class ProfileController {
       throw new HttpException(
         {
           success: false,
-          message: 'Error al cambiar la contraseña',
+          message: error.message || 'Error al cambiar la contraseña',
           error: error.message,
         },
         HttpStatus.BAD_REQUEST,

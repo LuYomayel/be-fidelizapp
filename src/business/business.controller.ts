@@ -38,7 +38,7 @@ import {
   ApiConflictResponse,
 } from '@nestjs/swagger';
 
-@ApiTags('businesses')
+@ApiTags('business')
 @Controller('business')
 @UsePipes(new ValidationPipe())
 export class BusinessController {

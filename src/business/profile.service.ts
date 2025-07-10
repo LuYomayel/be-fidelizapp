@@ -92,80 +92,82 @@ export class ProfileService {
     businessId: number,
     file: Express.Multer.File,
   ): Promise<IBusinessProfile> {
-    if (!file) {
-      throw new BadRequestException('No se proporcionó archivo de logo');
-    }
-
-    const business = await this.businessRepository.findOne({
-      where: { id: businessId },
-    });
-
-    if (!business) {
-      throw new NotFoundException('Negocio no encontrado');
-    }
-
-    // Crear directorio si no existe
-    const uploadDir = path.join(process.cwd(), 'uploads', 'logos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    // Eliminar logo anterior si existe
-    if (business.logoPath) {
-      const oldLogoPath = path.join(process.cwd(), business.logoPath);
-      if (fs.existsSync(oldLogoPath)) {
-        fs.unlinkSync(oldLogoPath);
+    try {
+      if (!file) {
+        throw new BadRequestException('No se proporcionó archivo de logo');
       }
+
+      const business = await this.businessRepository.findOne({
+        where: { id: businessId },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Negocio no encontrado');
+      }
+
+      // Eliminar logo anterior si existe
+      if (business.logoPath) {
+        const oldLogoPath = path.join(process.cwd(), business.logoPath);
+        if (fs.existsSync(oldLogoPath)) {
+          fs.unlinkSync(oldLogoPath);
+        }
+      }
+
+      // El archivo ya se guardó automáticamente por diskStorage
+      // Solo necesitamos actualizar la ruta en la base de datos
+      // Asegurarnos de que la ruta sea relativa a la carpeta uploads
+      business.logoPath = file.path.replace(/^uploads\//, '');
+      business.updatedAt = new Date();
+      await this.businessRepository.save(business);
+
+      return this.getBusinessProfile(businessId);
+    } catch (error) {
+      console.log('error', error);
+      throw error;
     }
-
-    // Guardar nuevo logo
-    const filename = `logo-${Date.now()}-${Math.round(Math.random() * 1e9)}.${file.originalname.split('.').pop()}`;
-    const filepath = path.join(uploadDir, filename);
-    fs.writeFileSync(filepath, file.buffer);
-
-    // Actualizar ruta en base de datos
-    business.logoPath = `uploads/logos/${filename}`;
-    business.updatedAt = new Date();
-    await this.businessRepository.save(business);
-
-    return this.getBusinessProfile(businessId);
   }
 
   async changeBusinessPassword(
     businessId: number,
     changePasswordDto: IChangePasswordDto,
   ): Promise<void> {
-    const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
+    try {
+      const { currentPassword, newPassword, confirmPassword } =
+        changePasswordDto;
 
-    if (newPassword !== confirmPassword) {
-      throw new BadRequestException('Las contraseñas no coinciden');
+      if (newPassword !== confirmPassword) {
+        throw new BadRequestException('Las contraseñas no coinciden');
+      }
+
+      const business = await this.businessRepository.findOne({
+        where: { id: businessId },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Negocio no encontrado');
+      }
+
+      // Verificar contraseña actual
+      const isCurrentPasswordValid = await bcrypt.compare(
+        currentPassword,
+        business.password,
+      );
+
+      if (!isCurrentPasswordValid) {
+        throw new BadRequestException('Contraseña actual incorrecta');
+      }
+
+      // Hashear nueva contraseña
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Actualizar contraseña
+      business.password = hashedNewPassword;
+      business.updatedAt = new Date();
+      await this.businessRepository.save(business);
+    } catch (error) {
+      console.log('error', error);
+      throw error;
     }
-
-    const business = await this.businessRepository.findOne({
-      where: { id: businessId },
-    });
-
-    if (!business) {
-      throw new NotFoundException('Negocio no encontrado');
-    }
-
-    // Verificar contraseña actual
-    const isCurrentPasswordValid = await bcrypt.compare(
-      currentPassword,
-      business.password,
-    );
-
-    if (!isCurrentPasswordValid) {
-      throw new BadRequestException('Contraseña actual incorrecta');
-    }
-
-    // Hashear nueva contraseña
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-    // Actualizar contraseña
-    business.password = hashedNewPassword;
-    business.updatedAt = new Date();
-    await this.businessRepository.save(business);
   }
 
   async generateBusinessQR(businessId: number): Promise<IBusinessQRData> {
