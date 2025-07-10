@@ -16,6 +16,9 @@ async function bootstrap() {
   // Usar express.static directamente - esto permite /uploads/logos/archivo.png
   app.use('/uploads', express.static(uploadsPath));
 
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
   // Configuración global DESPUÉS de los archivos estáticos
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
