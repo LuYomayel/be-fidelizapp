@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Client } from './entities/client.entity';
+import { ClientCard } from './entities/client-card.entity';
 import { Stamp } from '../business/entities/stamp.entity';
 import { RewardRedemption } from '../business/entities/reward-redemption.entity';
 import * as bcrypt from 'bcrypt';
@@ -23,6 +24,8 @@ export class ClientProfileService {
   constructor(
     @InjectRepository(Client)
     private clientRepository: Repository<Client>,
+    @InjectRepository(ClientCard)
+    private clientCardRepository: Repository<ClientCard>,
     @InjectRepository(Stamp)
     private stampRepository: Repository<Stamp>,
     @InjectRepository(RewardRedemption)
@@ -38,7 +41,7 @@ export class ClientProfileService {
       throw new NotFoundException('Cliente no encontrado');
     }
 
-    // Obtener estadísticas del cliente
+    // Obtener estadísticas básicas
     const totalStamps = await this.stampRepository.count({
       where: { usedBy: clientId },
     });
@@ -46,6 +49,66 @@ export class ClientProfileService {
     const totalRedemptions = await this.rewardRedemptionRepository.count({
       where: { clientId: clientId },
     });
+
+    // Obtener tarjetas de cliente con información de negocios
+    const clientCards = await this.clientCardRepository.find({
+      where: { clientId },
+      relations: ['business'],
+      order: { lastStampDate: 'DESC' },
+    });
+
+    // Obtener estadísticas detalladas por negocio usando las tarjetas de cliente
+    const stampsByBusiness = clientCards.map((card) => ({
+      businessName: card.business.businessName,
+      businessId: card.businessId,
+      totalStamps: card.totalStamps,
+      availableStamps: card.availableStamps,
+      usedStamps: card.usedStamps,
+      level: card.level,
+      lastStampDate: card.lastStampDate,
+    }));
+
+    // Obtener recompensas recientes (últimas 5)
+    const recentRewards = await this.rewardRedemptionRepository.find({
+      where: { clientId },
+      relations: ['reward', 'reward.business'],
+      order: { redeemedAt: 'DESC' },
+      take: 5,
+    });
+
+    // Calcular días activos
+    const accountAge = Math.floor(
+      (Date.now() - client.createdAt.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    // Mapear tarjetas de cliente
+    const mappedClientCards = clientCards.map((card) => ({
+      id: card.id,
+      businessId: card.businessId,
+      businessName: card.business.businessName,
+      businessLogo: card.business.logoPath,
+      businessType: card.business.type,
+      totalStamps: card.totalStamps,
+      availableStamps: card.availableStamps,
+      usedStamps: card.usedStamps,
+      level: card.level,
+      lastStampDate: card.lastStampDate,
+      stampsForReward: card.business.stampsForReward,
+      rewardDescription: card.business.rewardDescription,
+    }));
+
+    // Mapear recompensas recientes
+    const mappedRecentRewards = recentRewards.map((reward) => ({
+      id: reward.id,
+      rewardName: reward.reward.name,
+      businessName: reward.reward.business.businessName,
+      businessLogo: reward.reward.business.logoPath,
+      stampsSpent: reward.stampsSpent,
+      redemptionCode: reward.redemptionCode,
+      status: reward.status,
+      redeemedAt: reward.redeemedAt,
+      expiresAt: reward.expiresAt,
+    }));
 
     return {
       id: client.id,
@@ -61,6 +124,16 @@ export class ClientProfileService {
       totalStamps,
       totalRedemptions,
       memberSince: client.createdAt,
+      statistics: {
+        totalStamps,
+        totalRedemptions,
+        activeDays: accountAge,
+        totalBusinesses: clientCards.length,
+        stampsByBusiness,
+        rewardsByBusiness: [], // Por ahora vacío, se puede implementar después
+      },
+      clientCards: mappedClientCards,
+      recentRewards: mappedRecentRewards,
     };
   }
 
@@ -103,6 +176,8 @@ export class ClientProfileService {
 
     // Remover campos que no se deben actualizar directamente
     const { currentPassword, ...dataToUpdate } = updateData;
+
+    void currentPassword; // Evitar error de linter
 
     // Actualizar campos
     Object.assign(client, dataToUpdate);
@@ -160,43 +235,74 @@ export class ClientProfileService {
     clientId: number,
     changePasswordDto: IChangePasswordDto,
   ): Promise<void> {
-    const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
+    try {
+      const { currentPassword, newPassword, confirmPassword } =
+        changePasswordDto;
 
-    if (newPassword !== confirmPassword) {
-      throw new BadRequestException('Las contraseñas no coinciden');
-    }
+      if (newPassword !== confirmPassword) {
+        throw new BadRequestException('Las contraseñas no coinciden');
+      }
 
-    const client = await this.clientRepository.findOne({
-      where: { id: clientId },
-    });
+      const client = await this.clientRepository.findOne({
+        where: { id: clientId },
+      });
 
-    if (!client) {
-      throw new NotFoundException('Cliente no encontrado');
-    }
+      if (!client) {
+        throw new NotFoundException('Cliente no encontrado');
+      }
 
-    if (!client.password) {
-      throw new BadRequestException(
-        'Este cliente no tiene contraseña configurada',
+      if (!client.password) {
+        throw new BadRequestException(
+          'Este cliente no tiene contraseña configurada',
+        );
+      }
+
+      const isCurrentPasswordValid = await bcrypt.compare(
+        currentPassword,
+        client.password,
       );
+
+      if (!isCurrentPasswordValid) {
+        throw new BadRequestException('Contraseña actual incorrecta');
+      }
+
+      // Hashear nueva contraseña
+      const hashedNewPassword = await bcrypt.hash(newPassword.trim(), 10);
+
+      // Actualizar contraseña
+      client.password = hashedNewPassword;
+      client.updatedAt = new Date();
+      await this.clientRepository.save(client);
+    } catch (error) {
+      console.log('error', error);
+      throw error;
     }
+  }
 
-    // Verificar contraseña actual
-    const isCurrentPasswordValid = await bcrypt.compare(
-      currentPassword,
-      client.password,
-    );
+  async resetPasswordWithoutCurrent(
+    clientId: number,
+    newPassword: string,
+  ): Promise<void> {
+    try {
+      const client = await this.clientRepository.findOne({
+        where: { id: clientId },
+      });
 
-    if (!isCurrentPasswordValid) {
-      throw new BadRequestException('Contraseña actual incorrecta');
+      if (!client) {
+        throw new NotFoundException('Cliente no encontrado');
+      }
+
+      // Hashear nueva contraseña
+      const hashedNewPassword = await bcrypt.hash(newPassword.trim(), 10);
+
+      // Actualizar contraseña
+      client.password = hashedNewPassword;
+      client.updatedAt = new Date();
+      await this.clientRepository.save(client);
+    } catch (error) {
+      console.log('error', error);
+      throw error;
     }
-
-    // Hashear nueva contraseña
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-    // Actualizar contraseña
-    client.password = hashedNewPassword;
-    client.updatedAt = new Date();
-    await this.clientRepository.save(client);
   }
 
   async getClientSettings(clientId: number): Promise<IClientSettings> {

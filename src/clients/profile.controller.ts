@@ -10,6 +10,7 @@ import {
   HttpStatus,
   UploadedFile,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -31,16 +32,16 @@ import {
 } from '@shared';
 
 @ApiTags('Client Profile')
-@Controller('api/clients/profile')
+@Controller('clients/profile')
 @UseGuards(JwtAuthGuard)
 export class ClientProfileController {
   constructor(private readonly profileService: ClientProfileService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Obtener perfil del cliente' })
+  @ApiOperation({ summary: 'Obtener perfil básico del cliente' })
   @ApiResponse({
     status: 200,
-    description: 'Perfil del cliente obtenido exitosamente',
+    description: 'Perfil básico del cliente obtenido exitosamente',
   })
   async getProfile(
     @Req() req: ClientRequest,
@@ -58,6 +59,37 @@ export class ClientProfileController {
         {
           success: false,
           message: 'Error al obtener el perfil',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('complete')
+  @ApiOperation({
+    summary: 'Obtener perfil completo del cliente con estadísticas',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil completo del cliente obtenido exitosamente',
+  })
+  async getCompleteProfile(
+    @Req() req: ClientRequest,
+  ): Promise<ApiResponseType<IClientProfile>> {
+    try {
+      const profile = await this.profileService.getClientProfile(
+        req.user.userId,
+      );
+      return {
+        success: true,
+        data: profile,
+      };
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Error al obtener el perfil completo',
           error: error.message,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -151,6 +183,7 @@ export class ClientProfileController {
     @Req() req: ClientRequest,
   ): Promise<ApiResponseType<void>> {
     try {
+      console.log('changePasswordDto', changePasswordDto);
       await this.profileService.changeClientPassword(
         req.user.userId,
         changePasswordDto,
@@ -163,7 +196,45 @@ export class ClientProfileController {
       throw new HttpException(
         {
           success: false,
-          message: 'Error al cambiar la contraseña',
+          message: error.message || 'Error al cambiar la contraseña',
+          error: error.message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('reset-password-without-current')
+  @ApiOperation({
+    summary:
+      'Restablecer contraseña sin validar la actual (solo para casos especiales)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña restablecida exitosamente',
+  })
+  async resetPasswordWithoutCurrent(
+    @Body() body: { newPassword: string; confirmPassword: string },
+    @Req() req: ClientRequest,
+  ): Promise<ApiResponseType<void>> {
+    try {
+      if (body.newPassword !== body.confirmPassword) {
+        throw new BadRequestException('Las contraseñas no coinciden');
+      }
+
+      await this.profileService.resetPasswordWithoutCurrent(
+        req.user.userId,
+        body.newPassword,
+      );
+      return {
+        success: true,
+        message: 'Contraseña restablecida exitosamente',
+      };
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Error al restablecer la contraseña',
           error: error.message,
         },
         HttpStatus.BAD_REQUEST,

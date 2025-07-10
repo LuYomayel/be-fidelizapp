@@ -23,7 +23,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LocalClientAuthGuard } from '../auth/local-auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { ClientRequest, AuthenticatedRequest } from 'shared';
+import { ClientRequest } from 'shared';
 
 @ApiTags('clients')
 @Controller('clients')
@@ -238,29 +238,6 @@ export class ClientsController {
         success: false,
         data: null,
         message: error.message || 'Error al iniciar sesión',
-      };
-    }
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('profile')
-  @ApiOperation({ summary: 'Obtener perfil del cliente autenticado' })
-  @ApiResponse({ status: 200, description: 'Perfil del cliente' })
-  async getProfile(@Request() req: AuthenticatedRequest) {
-    try {
-      console.log('req.user en profile:', req.user);
-      return {
-        success: true,
-        data: {
-          user: req.user,
-        },
-        message: 'Perfil obtenido exitosamente',
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        data: null,
-        message: error.message || 'Error al obtener el perfil',
       };
     }
   }

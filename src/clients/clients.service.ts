@@ -15,6 +15,7 @@ import { GoogleUser } from '../auth/google.strategy';
 import { EmailService } from '../common/services/email.service';
 import { VerificationCodeService } from '../common/services/verification-code.service';
 import { VerificationCodeType } from './entities/verification-code.entity';
+import { ClientProfileService } from './client-profile.service';
 
 @Injectable()
 export class ClientsService {
@@ -24,6 +25,7 @@ export class ClientsService {
     private jwtService: JwtService,
     private emailService: EmailService,
     private verificationCodeService: VerificationCodeService,
+    private clientProfileService: ClientProfileService,
   ) {}
 
   async create(
@@ -260,6 +262,9 @@ export class ClientsService {
     return await this.clientRepository.findOne({ where: { email } });
   }
 
+  async getProfile(id: number): Promise<any> {
+    return await this.clientProfileService.getClientProfile(id);
+  }
   async update(id: number, updateClientDto: UpdateClientDto): Promise<Client> {
     const client = await this.findOne(id);
 
@@ -283,6 +288,8 @@ export class ClientsService {
     password: string,
     hashedPassword: string,
   ): Promise<boolean> {
+    console.log('password', password, password.length);
+    console.log('hashedPassword', hashedPassword, hashedPassword.length);
     return await bcrypt.compare(password, hashedPassword);
   }
 
