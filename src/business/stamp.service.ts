@@ -322,6 +322,13 @@ export class StampService {
     };
   }
 
+  private isStampExpired(stamp: Stamp): boolean {
+    if (!stamp.expiresAt) return false;
+    // Solamente actualizamos si el estado es activo. Sino es activo entonces es usado o cancelado y no me interesa.
+    if (stamp.status !== StampStatus.ACTIVE) return false;
+    return new Date(stamp.expiresAt) < new Date();
+  }
+
   /**
    * Obtiene todos los sellos generados por un negocio
    */
@@ -392,6 +399,13 @@ export class StampService {
       take: filters.limit,
     });
 
+    const updatedStamps = stamps.map((stamp) => {
+      return {
+        ...stamp,
+        status: this.isStampExpired(stamp) ? StampStatus.EXPIRED : stamp.status,
+      };
+    });
+
     // Obtener clientes únicos que han usado sellos
     const clientIds = [
       ...new Set(stamps.map((stamp) => stamp.usedBy).filter(Boolean)),
@@ -405,7 +419,7 @@ export class StampService {
     }
 
     // Mapear sellos con información del cliente
-    const stampsWithClient = stamps.map((stamp) => {
+    const stampsWithClient = updatedStamps.map((stamp) => {
       const client = clients.find((c) => c.id === stamp.usedBy);
       return {
         ...stamp,
