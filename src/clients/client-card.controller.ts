@@ -27,6 +27,7 @@ import {
   RedeemStampResponseDto,
 } from '../common/dto/stamp.dto';
 import { RedemptionFiltersDto } from '../common/dto/stamp.dto';
+import { ClientRequest } from '@shared';
 
 @ApiTags('🎯 Sistema de Tarjetas - Cliente')
 @Controller('client-cards')
@@ -121,7 +122,7 @@ export class ClientCardController {
   @ApiOperation({
     summary: '💳 Obtener todas las tarjetas',
     description:
-      'Obtiene todas las tarjetas de fidelización del cliente con información detallada de cada negocio.',
+      'Obtiene todas las tarjetas de fidelización del cliente con información detallada de cada negocio. Incluye la recompensa más cercana a canjear y el progreso necesario para cada negocio.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -129,35 +130,38 @@ export class ClientCardController {
     schema: {
       example: {
         success: true,
-        data: {
-          cards: [
-            {
+        data: [
+          {
+            id: 1,
+            totalStamps: 12,
+            availableStamps: 12,
+            usedStamps: 0,
+            level: 1,
+            lastStampDate: '2024-01-15T10:30:00.000Z',
+            business: {
               id: 1,
-              totalStamps: 12,
-              availableStamps: 12,
-              usedStamps: 0,
-              level: 1,
-              lastStampDate: '2024-01-15T10:30:00.000Z',
-              business: {
-                id: 1,
-                businessName: 'Cafetería La Esquina',
-                logoPath: '/uploads/logos/logo-123.jpg',
-                type: 'Cafeteria',
-                stampsForReward: 10,
-                rewardDescription: 'Café gratis',
-              },
+              businessName: 'Cafetería La Esquina',
+              logoPath: '/uploads/logos/logo-123.jpg',
+              type: 'Cafeteria',
+              stampsForReward: 10,
+              rewardDescription: 'Café gratis',
             },
-          ],
-          total: 1,
-        },
+            nearestReward: {
+              id: 1,
+              name: 'Café gratis',
+              stampsCost: 5,
+              description: 'Café de cualquier tamaño gratis',
+            },
+            progressTarget: 5,
+          },
+        ],
         message: 'Tarjetas obtenidas exitosamente',
       },
     },
   })
   async getClientCards(
-    @Request() req: any,
+    @Request() req: ClientRequest,
   ): Promise<{ success: boolean; data: any; message: string }> {
-    console.log('req.user', req.user);
     const clientId = req.user.userId;
     const cards = await this.stampService.getClientCards(clientId);
 

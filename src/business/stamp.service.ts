@@ -18,6 +18,7 @@ import { Business } from './entities/business.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
 import { Client } from '../clients/entities/client.entity';
 import { StampRedemption } from '../clients/entities/stamp-redemption.entity';
+import { Reward } from './entities/reward.entity';
 import { CreateStampDto } from '../common/dto';
 import * as QRCode from 'qrcode';
 
@@ -34,6 +35,8 @@ export class StampService {
     private clientRepository: Repository<Client>,
     @InjectRepository(StampRedemption)
     private redemptionRepository: Repository<StampRedemption>,
+    @InjectRepository(Reward)
+    private rewardRepository: Repository<Reward>,
   ) {}
 
   /**
@@ -447,14 +450,83 @@ export class StampService {
   }
 
   /**
-   * Obtiene las tarjetas de un cliente
+   * Obtiene las tarjetas de un cliente con información de recompensas
    */
-  async getClientCards(clientId: number): Promise<ClientCard[]> {
-    return await this.clientCardRepository.find({
+  async getClientCards(clientId: number): Promise<
+    Array<
+      ClientCard & {
+        nearestReward?: {
+          id: number;
+          name: string;
+          stampsCost: number;
+          description: string;
+        };
+        progressTarget: number;
+      }
+    >
+  > {
+    // Obtener todas las tarjetas del cliente
+    const clientCards = await this.clientCardRepository.find({
       where: { clientId },
       relations: ['business'],
       order: { lastStampDate: 'DESC' },
     });
+
+    // Procesar cada tarjeta para agregar información de recompensas
+    const clientCardsWithRewards = await Promise.all(
+      clientCards.map(async (clientCard) => {
+        // Obtener recompensas activas del negocio
+        const activeRewards = await this.rewardRepository.find({
+          where: {
+            businessId: clientCard.businessId,
+            active: true,
+          },
+          order: { stampsCost: 'ASC' }, // Ordenar por menor cantidad de sellos requeridos
+        });
+
+        // Filtrar recompensas válidas (activas, no expiradas, con stock)
+        const now = new Date();
+        const validRewards = activeRewards.filter((reward) => {
+          // Verificar que no esté expirada
+          if (reward.expirationDate && reward.expirationDate < now) {
+            return false;
+          }
+          // Verificar que tenga stock (stock = -1 significa ilimitado)
+          if (
+            reward.stock !== undefined &&
+            reward.stock !== -1 &&
+            reward.stock <= 0
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        // Encontrar la recompensa más cercana (que requiera menos sellos)
+        const nearestReward = validRewards.length > 0 ? validRewards[0] : null;
+
+        // Determinar el objetivo de progreso
+        let progressTarget = 10; // Por defecto 10 sellos
+        if (nearestReward) {
+          progressTarget = nearestReward.stampsCost;
+        }
+
+        return {
+          ...clientCard,
+          nearestReward: nearestReward
+            ? {
+                id: nearestReward.id,
+                name: nearestReward.name,
+                stampsCost: nearestReward.stampsCost,
+                description: nearestReward.description,
+              }
+            : undefined,
+          progressTarget,
+        };
+      }),
+    );
+
+    return clientCardsWithRewards;
   }
 
   /**

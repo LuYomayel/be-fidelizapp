@@ -172,6 +172,30 @@ export class ClientCardResponseDto {
   };
 }
 
+export class ClientCardWithRewardDto extends ClientCardResponseDto {
+  @ApiPropertyOptional({
+    description: 'Recompensa más cercana a canjear',
+    example: {
+      id: 1,
+      name: 'Café gratis',
+      stampsCost: 5,
+      description: 'Café de cualquier tamaño gratis',
+    },
+  })
+  nearestReward?: {
+    id: number;
+    name: string;
+    stampsCost: number;
+    description: string;
+  };
+
+  @ApiProperty({
+    description: 'Objetivo de sellos para la próxima recompensa',
+    example: 5,
+  })
+  progressTarget: number;
+}
+
 export class RedeemStampResponseDto {
   @ApiProperty({ description: 'Mensaje de éxito' })
   message: string;
