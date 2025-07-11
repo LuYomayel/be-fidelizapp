@@ -3,7 +3,7 @@ import { UsersService } from '../users/users.service';
 import { ClientsService } from '../clients/clients.service';
 import { JwtService } from '@nestjs/jwt';
 import { GoogleUser } from './google.strategy';
-import { ClientJwtPayload, BusinessJwtPayload } from 'shared';
+import { ClientJwtPayload, BusinessJwtPayload } from '@shared';
 
 @Injectable()
 export class AuthService {

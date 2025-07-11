@@ -11,6 +11,7 @@ import {
   Put,
   Delete,
   Patch,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,6 +31,9 @@ import {
   IRedemptionFilters,
   RedemptionStatus,
   AuthenticatedRequest,
+  IReward,
+  BusinessRequest,
+  RewardType,
 } from '@shared';
 
 @ApiTags('rewards')
@@ -80,7 +84,7 @@ export class RewardController {
     },
   })
   async createReward(
-    @Request() req,
+    @Request() req: BusinessRequest,
     @Body()
     rewardData: {
       name: string;
@@ -91,6 +95,8 @@ export class RewardController {
       expirationDate?: Date;
       stock?: number;
       specialConditions?: string;
+      type?: RewardType;
+      typeDescription?: string;
     },
   ): Promise<CustomApiResponse<any>> {
     try {
@@ -116,7 +122,9 @@ export class RewardController {
   @Get('my-rewards')
   @ApiOperation({ summary: 'Obtener recompensas del negocio' })
   @ApiResponse({ status: 200, description: 'Lista de recompensas' })
-  async getBusinessRewards(@Request() req): Promise<CustomApiResponse<any>> {
+  async getBusinessRewards(
+    @Request() req: BusinessRequest,
+  ): Promise<CustomApiResponse<IReward[]>> {
     try {
       const businessId = req.user.userId;
       const rewards = await this.rewardService.getBusinessRewards(businessId);
@@ -140,7 +148,7 @@ export class RewardController {
     description: 'Recompensa actualizada exitosamente',
   })
   async updateReward(
-    @Request() req,
+    @Request() req: BusinessRequest,
     @Param('rewardId', ParseIntPipe) rewardId: number,
     @Body()
     updateData: {
@@ -153,8 +161,10 @@ export class RewardController {
       stock?: number;
       specialConditions?: string;
       active?: boolean;
+      type?: RewardType;
+      typeDescription?: string;
     },
-  ): Promise<CustomApiResponse<any>> {
+  ): Promise<CustomApiResponse<IReward | null>> {
     try {
       const businessId = req.user.userId;
       const reward = await this.rewardService.updateReward(
@@ -162,6 +172,9 @@ export class RewardController {
         rewardId,
         updateData,
       );
+      if (!reward) {
+        throw new NotFoundException('Recompensa no encontrada');
+      }
 
       return {
         success: true,
@@ -183,12 +196,18 @@ export class RewardController {
     description: 'Recompensa eliminada exitosamente',
   })
   async deleteReward(
-    @Request() req,
+    @Request() req: BusinessRequest,
     @Param('rewardId', ParseIntPipe) rewardId: number,
-  ): Promise<CustomApiResponse<any>> {
+  ): Promise<CustomApiResponse<void>> {
     try {
       const businessId = req.user.userId;
-      await this.rewardService.deleteReward(businessId, rewardId);
+      const reward = await this.rewardService.deleteReward(
+        businessId,
+        rewardId,
+      );
+      if (!reward) {
+        throw new NotFoundException('Recompensa no encontrada');
+      }
 
       return {
         success: true,
@@ -257,7 +276,6 @@ export class RewardController {
   ): Promise<CustomApiResponse<IRedemptionTicket>> {
     try {
       const clientId = req.user.userId;
-      console.log('request:', body, clientId);
       const redemptionTicket = await this.rewardService.redeemReward(
         body.businessId,
         rewardId,

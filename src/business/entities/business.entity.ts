@@ -55,6 +55,9 @@ export class Business implements IBusiness {
   type: BusinessType;
 
   @Column({ nullable: true, length: 255 })
+  customType?: string;
+
+  @Column({ nullable: true, length: 255 })
   instagram?: string;
 
   @Column({ nullable: true, length: 255 })

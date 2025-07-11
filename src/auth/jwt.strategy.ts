@@ -7,7 +7,7 @@ import {
   ClientUser,
   BusinessUser,
   AuthenticatedUser,
-} from 'shared';
+} from '@shared';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

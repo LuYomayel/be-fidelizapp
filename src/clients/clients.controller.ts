@@ -23,7 +23,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LocalClientAuthGuard } from '../auth/local-auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { ClientRequest } from 'shared';
+import { ClientRequest } from '@shared';
 
 @ApiTags('clients')
 @Controller('clients')

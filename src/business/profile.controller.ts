@@ -140,16 +140,6 @@ export class ProfileController {
     @Req() req: any,
   ): Promise<ApiResponseType<IBusinessProfile>> {
     try {
-      console.log('=== LOGO UPDATE DEBUG ===');
-      console.log('Request headers:', req.headers);
-      console.log('Request body:', req.body);
-      console.log('Uploaded file:', logo);
-      console.log('File fieldname:', logo?.fieldname);
-      console.log('File originalname:', logo?.originalname);
-      console.log('File mimetype:', logo?.mimetype);
-      console.log('File size:', logo?.size);
-      console.log('File buffer length:', logo?.buffer?.length);
-      console.log('========================');
       const profile = await this.profileService.updateBusinessLogo(
         req.user.businessId,
         logo,

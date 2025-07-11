@@ -26,8 +26,8 @@ import {
   CreateStampDto,
   QuickStampDto,
   StampResponseDto,
-  RedeemStampResponseDto,
 } from '../common/dto/stamp.dto';
+import { StampStatus, StampType } from '@shared';
 
 @ApiTags('🎫 Sistema de Sellos - Negocio')
 @Controller('business/stamps')
@@ -145,7 +145,7 @@ export class StampController {
   @ApiOperation({
     summary: '📋 Obtener historial de sellos',
     description:
-      'Obtiene todos los sellos generados por el negocio con paginación.',
+      'Obtiene todos los sellos generados por el negocio con paginación y filtros.',
   })
   @ApiQuery({
     name: 'page',
@@ -158,6 +158,48 @@ export class StampController {
     required: false,
     description: 'Elementos por página (por defecto: 10)',
     example: 10,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Buscar por código de sello',
+    example: 'ABC123',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filtrar por estado del sello',
+    example: 'activo',
+  })
+  @ApiQuery({
+    name: 'stampType',
+    required: false,
+    description: 'Filtrar por tipo de sello',
+    example: 'compra',
+  })
+  @ApiQuery({
+    name: 'purchaseType',
+    required: false,
+    description: 'Filtrar por tipo de compra',
+    example: 'pequeña',
+  })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    description: 'Fecha desde (ISO string)',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    description: 'Fecha hasta (ISO string)',
+    example: '2024-12-31T23:59:59.999Z',
+  })
+  @ApiQuery({
+    name: 'clientId',
+    required: false,
+    description: 'Filtrar por ID del cliente',
+    example: 1,
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -175,6 +217,20 @@ export class StampController {
               description: 'Café grande',
               status: 'usado',
               createdAt: '2024-01-15T10:30:00.000Z',
+              client: {
+                id: 1,
+                firstName: 'Juan',
+                lastName: 'Pérez',
+                email: 'juan@example.com',
+              },
+            },
+          ],
+          clients: [
+            {
+              id: 1,
+              firstName: 'Juan',
+              lastName: 'Pérez',
+              email: 'juan@example.com',
             },
           ],
           total: 50,
@@ -189,6 +245,13 @@ export class StampController {
     @Request() req: { user: { businessId?: number; userId?: number } },
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('stampType') stampType?: string,
+    @Query('purchaseType') purchaseType?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('clientId') clientId?: string,
   ): Promise<{ success: boolean; data: any; message: string }> {
     try {
       const businessId = req.user.userId;
@@ -196,10 +259,21 @@ export class StampController {
         throw new Error('Business ID not found in user context');
       }
 
-      const result = await this.stampService.getStampsByBusiness(
-        businessId,
+      const filters = {
         page,
         limit,
+        search,
+        status: status as StampStatus | undefined,
+        stampType: stampType as StampType | undefined,
+        purchaseType,
+        dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+        dateTo: dateTo ? new Date(dateTo) : undefined,
+        clientId: clientId ? parseInt(clientId) : undefined,
+      };
+
+      const result = await this.stampService.getStampsByBusinessWithFilters(
+        businessId,
+        filters,
       );
 
       return {

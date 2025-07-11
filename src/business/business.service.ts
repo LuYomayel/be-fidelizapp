@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Business } from './entities/business.entity';
 import { CreateBusinessDto, UpdateBusinessDto } from '../common/dto';
-import { IDashboard } from 'shared';
+import { BusinessType, IDashboard } from '@shared';
 import { Stamp } from './entities/stamp.entity';
 import { Client } from '../clients/entities/client.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
@@ -52,6 +52,9 @@ export class BusinessService {
 
     const hashedPassword = await bcrypt.hash(createBusinessDto.password, 10);
 
+    if (createBusinessDto.type !== BusinessType.OTRO) {
+      createBusinessDto.customType = undefined;
+    }
     const business = this.businessRepository.create({
       ...createBusinessDto,
       password: hashedPassword,
@@ -298,6 +301,10 @@ export class BusinessService {
         updateBusinessDto.password,
         10,
       );
+    }
+
+    if (updateBusinessDto.type !== BusinessType.OTRO) {
+      updateBusinessDto.customType = undefined;
     }
 
     Object.assign(business, updateBusinessDto);

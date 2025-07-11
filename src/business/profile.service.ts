@@ -16,6 +16,7 @@ import {
   IChangePasswordDto,
   IBusinessQRData,
   IBusinessSettings,
+  BusinessType,
 } from '@shared';
 
 @Injectable()
@@ -47,6 +48,7 @@ export class ProfileService {
       province: business.province,
       logoPath: business.logoPath,
       type: business.type,
+      customType: business.customType,
       instagram: business.instagram,
       tiktok: business.tiktok,
       website: business.website,
@@ -77,6 +79,10 @@ export class ProfileService {
       if (existingBusiness) {
         throw new BadRequestException('El email ya está en uso');
       }
+    }
+
+    if (updateData.type !== BusinessType.OTRO) {
+      updateData.customType = undefined;
     }
 
     // Actualizar campos

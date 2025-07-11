@@ -5,10 +5,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
-  FindOptionsWhere,
+  In,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
+  Like,
+  Between,
 } from 'typeorm';
 import { IRedemptionFilters, StampStatus, StampType } from '@shared';
 import { Stamp } from './entities/stamp.entity';
@@ -16,7 +18,7 @@ import { Business } from './entities/business.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
 import { Client } from '../clients/entities/client.entity';
 import { StampRedemption } from '../clients/entities/stamp-redemption.entity';
-import { CreateStampDto, RedeemStampDto } from '../common/dto';
+import { CreateStampDto } from '../common/dto';
 import * as QRCode from 'qrcode';
 
 @Injectable()
@@ -59,7 +61,7 @@ export class StampService {
         },
       });
       return qrCodeDataUrl;
-    } catch (error) {
+    } catch {
       throw new BadRequestException('Error generando código QR');
     }
   }
@@ -323,30 +325,100 @@ export class StampService {
   /**
    * Obtiene todos los sellos generados por un negocio
    */
-  async getStampsByBusiness(
+  async getStampsByBusinessWithFilters(
     businessId: number,
-    page: number = 1,
-    limit: number = 10,
+    filters: {
+      page: number;
+      limit: number;
+      search?: string;
+      status?: StampStatus;
+      stampType?: StampType;
+      purchaseType?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
+      clientId?: number;
+    },
   ): Promise<{
     stamps: Stamp[];
+    clients: Client[];
     total: number;
     page: number;
     totalPages: number;
   }> {
-    console.log('businessId', businessId);
+    // Construir las condiciones de búsqueda con tipado correcto
+    const whereConditions: Record<string, any> = { businessId };
+
+    // Filtro por búsqueda (código)
+    if (filters.search) {
+      whereConditions.code = Like(`%${filters.search}%`);
+    }
+
+    // Filtro por estado
+    if (filters.status) {
+      whereConditions.status = filters.status;
+    }
+
+    // Filtro por tipo de sello
+    if (filters.stampType) {
+      whereConditions.stampType = filters.stampType;
+    }
+
+    // Filtro por tipo de compra
+    if (filters.purchaseType) {
+      whereConditions.purchaseType = filters.purchaseType;
+    }
+
+    // Filtro por cliente
+    if (filters.clientId) {
+      whereConditions.usedBy = filters.clientId;
+    }
+
+    // Filtro por fechas - corregido
+    if (filters.dateFrom || filters.dateTo) {
+      if (filters.dateFrom && filters.dateTo) {
+        whereConditions.createdAt = Between(filters.dateFrom, filters.dateTo);
+      } else if (filters.dateFrom) {
+        whereConditions.createdAt = MoreThanOrEqual(filters.dateFrom);
+      } else if (filters.dateTo) {
+        whereConditions.createdAt = LessThanOrEqual(filters.dateTo);
+      }
+    }
+
     const [stamps, total] = await this.stampRepository.findAndCount({
-      where: { businessId },
+      where: whereConditions,
       relations: ['business'],
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (filters.page - 1) * filters.limit,
+      take: filters.limit,
     });
-    console.log('stamps', stamps);
+
+    // Obtener clientes únicos que han usado sellos
+    const clientIds = [
+      ...new Set(stamps.map((stamp) => stamp.usedBy).filter(Boolean)),
+    ];
+
+    let clients: Client[] = [];
+    if (clientIds.length > 0) {
+      clients = await this.clientRepository.find({
+        where: { id: In(clientIds) },
+      });
+    }
+
+    // Mapear sellos con información del cliente
+    const stampsWithClient = stamps.map((stamp) => {
+      const client = clients.find((c) => c.id === stamp.usedBy);
+      return {
+        ...stamp,
+        client,
+      };
+    });
+
     return {
-      stamps,
+      stamps: stampsWithClient,
+      clients,
       total,
-      page,
-      totalPages: Math.ceil(total / limit),
+      page: filters.page,
+      totalPages: Math.ceil(total / filters.limit),
     };
   }
 
@@ -452,7 +524,7 @@ export class StampService {
       const total = await this.redemptionRepository.count({
         where: { clientId },
       });
-      console.log('page', page, 'limit', limit, 'total', total);
+
       // Obtener los registros paginados
       const redemptions = await this.redemptionRepository.find({
         where: { clientId },

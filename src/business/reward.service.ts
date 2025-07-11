@@ -17,6 +17,7 @@ import {
   IRedemptionDashboard,
   IDeliverRedemptionDto,
   IRedemptionFilters,
+  RewardType,
 } from '@shared';
 
 @Injectable()
@@ -54,6 +55,8 @@ export class RewardService {
       expirationDate?: Date;
       stock?: number;
       specialConditions?: string;
+      type?: RewardType;
+      typeDescription?: string;
     },
   ): Promise<Reward> {
     const business = await this.businessRepository.findOne({
@@ -74,7 +77,7 @@ export class RewardService {
   // Obtener recompensas de un negocio
   async getBusinessRewards(businessId: number): Promise<Reward[]> {
     return this.rewardRepository.find({
-      where: { businessId, active: true },
+      where: { businessId },
       order: { createdAt: 'DESC' },
     });
   }
@@ -93,33 +96,55 @@ export class RewardService {
       stock?: number;
       specialConditions?: string;
       active?: boolean;
+      type?: RewardType;
+      typeDescription?: string;
     },
-  ): Promise<Reward> {
-    const reward = await this.rewardRepository.findOne({
-      where: { id: rewardId, businessId },
-    });
+  ): Promise<Reward | null> {
+    try {
+      const reward = await this.rewardRepository.findOne({
+        where: { id: rewardId, businessId },
+      });
 
-    if (!reward) {
-      throw new NotFoundException('Recompensa no encontrada');
+      if (!reward) {
+        throw new NotFoundException('Recompensa no encontrada');
+      }
+      console.log('updateData', updateData);
+      const updatedReward = await this.rewardRepository.update(
+        rewardId,
+        updateData,
+      );
+      if (updatedReward.affected === 0) {
+        throw new BadRequestException('No se pudo actualizar la recompensa');
+      }
+      return this.rewardRepository.findOne({
+        where: { id: rewardId, businessId },
+      });
+    } catch (error: any) {
+      throw new BadRequestException(error.message);
     }
-
-    Object.assign(reward, updateData);
-    return this.rewardRepository.save(reward);
   }
 
   // Eliminar una recompensa
-  async deleteReward(businessId: number, rewardId: number): Promise<void> {
-    const reward = await this.rewardRepository.findOne({
-      where: { id: rewardId, businessId },
-    });
+  async deleteReward(
+    businessId: number,
+    rewardId: number,
+  ): Promise<Reward | null> {
+    try {
+      const reward = await this.rewardRepository.findOne({
+        where: { id: rewardId, businessId },
+      });
 
-    if (!reward) {
-      throw new NotFoundException('Recompensa no encontrada');
+      if (!reward) {
+        throw new NotFoundException('Recompensa no encontrada');
+      }
+
+      // Soft delete - marcar como inactiva en lugar de eliminar
+      reward.active = false;
+      await this.rewardRepository.save(reward);
+      return reward;
+    } catch (error: any) {
+      throw new BadRequestException(error.message);
     }
-
-    // Soft delete - marcar como inactiva en lugar de eliminar
-    reward.active = false;
-    await this.rewardRepository.save(reward);
   }
 
   // Canjear una recompensa (MEJORADO)

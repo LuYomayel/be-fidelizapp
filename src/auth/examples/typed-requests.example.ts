@@ -11,7 +11,7 @@ import {
   ClientUser,
   isClientUser,
   isBusinessUser,
-} from 'shared';
+} from '@shared';
 
 @Controller('example')
 export class ExampleController {

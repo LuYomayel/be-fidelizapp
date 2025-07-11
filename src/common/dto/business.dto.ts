@@ -123,6 +123,16 @@ export class CreateBusinessDto implements ICreateBusinessDto {
   type: BusinessType;
 
   @ApiPropertyOptional({
+    description: 'Tipo de negocio personalizado',
+    example: 'Cafetería',
+    maxLength: 255,
+  })
+  @IsOptional()
+  @IsString()
+  @Length(1, 255)
+  customType?: string;
+
+  @ApiPropertyOptional({
     description: 'Instagram del negocio',
     example: '@negocio',
     maxLength: 255,

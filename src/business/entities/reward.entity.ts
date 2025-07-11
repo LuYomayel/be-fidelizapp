@@ -10,12 +10,19 @@ import {
   Index,
 } from 'typeorm';
 import { Business } from './business.entity';
+import { IReward, RewardType } from '@shared';
 
 @Entity('rewards')
 @Index(['businessId', 'active'])
-export class Reward {
+export class Reward implements IReward {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: 'enum', enum: RewardType })
+  type: RewardType;
+
+  @Column({ nullable: true })
+  typeDescription?: string;
 
   @Column({ name: 'business_id' })
   businessId: number;
