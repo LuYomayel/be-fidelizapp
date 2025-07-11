@@ -9,7 +9,8 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Business } from './entities/business.entity';
 import { CreateBusinessDto, UpdateBusinessDto } from '../common/dto';
-import { BusinessType, IDashboard } from '@shared';
+import { BusinessType, IDashboard, IClientCardWithReward } from '@shared';
+import { StampService } from './stamp.service';
 import { Stamp } from './entities/stamp.entity';
 import { Client } from '../clients/entities/client.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
@@ -36,6 +37,7 @@ export class BusinessService {
     private rewardRepository: Repository<Reward>,
     @InjectRepository(RewardRedemption)
     private rewardRedemptionRepository: Repository<RewardRedemption>,
+    private stampService: StampService,
   ) {}
 
   async create(
@@ -264,13 +266,60 @@ export class BusinessService {
           ? 100
           : 0;
 
-    // Clientes recientes
-    const recentClients = await this.clientCardRepository.find({
+    // Clientes recientes con información de recompensas
+    const recentClientCards = await this.clientCardRepository.find({
       where: { businessId: business.id },
       order: { createdAt: 'DESC' },
       take: 5,
       relations: ['client'],
     });
+
+    // Obtener información de recompensas para cada tarjeta
+    const recentClients: IClientCardWithReward[] = await Promise.all(
+      recentClientCards.map(async (clientCard) => {
+        // Obtener recompensas activas del negocio
+        const activeRewards = await this.rewardRepository.find({
+          where: {
+            businessId: clientCard.businessId,
+            active: true,
+          },
+          order: { stampsCost: 'ASC' },
+        });
+
+        // Filtrar recompensas válidas
+        const now = new Date();
+        const validRewards = activeRewards.filter((reward) => {
+          if (reward.expirationDate && reward.expirationDate < now) {
+            return false;
+          }
+          if (
+            reward.stock !== undefined &&
+            reward.stock !== -1 &&
+            reward.stock <= 0
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        // Encontrar la recompensa más cercana
+        const nearestReward = validRewards.length > 0 ? validRewards[0] : null;
+        const progressTarget = nearestReward ? nearestReward.stampsCost : 10;
+
+        return {
+          ...clientCard,
+          nearestReward: nearestReward
+            ? {
+                id: nearestReward.id,
+                name: nearestReward.name,
+                stampsCost: nearestReward.stampsCost,
+                description: nearestReward.description,
+              }
+            : undefined,
+          progressTarget,
+        };
+      }),
+    );
 
     return {
       totalStamps,

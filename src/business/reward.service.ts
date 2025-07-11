@@ -17,6 +17,7 @@ import {
   IRedemptionDashboard,
   IDeliverRedemptionDto,
   IRedemptionFilters,
+  IRewardRedemptionWithClientCard,
   RewardType,
 } from '@shared';
 
@@ -41,6 +42,56 @@ export class RewardService {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
+  }
+
+  // Función helper para transformar RewardRedemption a IRewardRedemptionWithClientCard
+  private async transformRedemptionWithClientCard(
+    redemption: RewardRedemption,
+  ): Promise<IRewardRedemptionWithClientCard> {
+    // Obtener información de recompensas para la tarjeta del cliente
+    const activeRewards = await this.rewardRepository.find({
+      where: {
+        businessId: redemption.clientCard.businessId,
+        active: true,
+      },
+      order: { stampsCost: 'ASC' },
+    });
+
+    // Filtrar recompensas válidas
+    const now = new Date();
+    const validRewards = activeRewards.filter((reward) => {
+      if (reward.expirationDate && reward.expirationDate < now) {
+        return false;
+      }
+      if (
+        reward.stock !== undefined &&
+        reward.stock !== -1 &&
+        reward.stock <= 0
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    // Encontrar la recompensa más cercana
+    const nearestReward = validRewards.length > 0 ? validRewards[0] : null;
+    const progressTarget = nearestReward ? nearestReward.stampsCost : 10;
+
+    return {
+      ...redemption,
+      clientCard: {
+        ...redemption.clientCard,
+        nearestReward: nearestReward
+          ? {
+              id: nearestReward.id,
+              name: nearestReward.name,
+              stampsCost: nearestReward.stampsCost,
+              description: nearestReward.description,
+            }
+          : undefined,
+        progressTarget,
+      },
+    };
   }
 
   // Crear una nueva recompensa
@@ -282,12 +333,25 @@ export class RewardService {
       take: 10,
     });
 
+    // Transformar las entidades a las interfaces extendidas
+    const pendingRedemptionsWithClientCard = await Promise.all(
+      pendingRedemptions.map((redemption) =>
+        this.transformRedemptionWithClientCard(redemption),
+      ),
+    );
+
+    const recentDeliveriesWithClientCard = await Promise.all(
+      recentDeliveries.map((redemption) =>
+        this.transformRedemptionWithClientCard(redemption),
+      ),
+    );
+
     return {
       totalPending,
       totalDelivered,
       totalExpired,
-      pendingRedemptions,
-      recentDeliveries,
+      pendingRedemptions: pendingRedemptionsWithClientCard,
+      recentDeliveries: recentDeliveriesWithClientCard,
     };
   }
 
