@@ -487,11 +487,11 @@ export class StampService {
         // Filtrar recompensas válidas (activas, no expiradas, con stock)
         const now = new Date();
         const validRewards = activeRewards.filter((reward) => {
-          // Verificar que no esté expirada
+          // Verificar que no esté expirada (solo si tiene fecha de expiración)
           if (reward.expirationDate && reward.expirationDate < now) {
             return false;
           }
-          // Verificar que tenga stock (stock = -1 significa ilimitado)
+          // Verificar que tenga stock (solo si tiene stock definido y no es ilimitado)
           if (
             reward.stock !== undefined &&
             reward.stock !== -1 &&
