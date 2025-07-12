@@ -258,7 +258,7 @@ export class BusinessController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Token JWT requerido' })
-  async getDashboard(@Req() req: any) {
+  async getDashboard(@Req() req: { user: { userId: number } }) {
     try {
       const dashboard = await this.businessService.getDashboard(
         req.user.userId,

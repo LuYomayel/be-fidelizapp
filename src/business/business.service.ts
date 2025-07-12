@@ -319,6 +319,7 @@ export class BusinessService {
               }
             : undefined,
           progressTarget,
+          availableRewards: validRewards,
         };
       }),
     );

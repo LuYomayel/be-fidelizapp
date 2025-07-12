@@ -92,6 +92,7 @@ export class RewardService {
             }
           : undefined,
         progressTarget,
+        availableRewards: validRewards,
       },
     };
   }
