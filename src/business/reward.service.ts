@@ -135,6 +135,25 @@ export class RewardService {
     });
   }
 
+  // Obtener recompensas disponibles para un cliente
+  async getClientAvailableRewards(clientId: number): Promise<Reward[]> {
+    try {
+      const clientCard = await this.clientCardRepository.findOne({
+        where: { clientId },
+        relations: ['business'],
+      });
+      if (!clientCard) {
+        throw new NotFoundException('Cliente no tiene tarjeta en este negocio');
+      }
+      return await this.rewardRepository.find({
+        where: { businessId: clientCard.businessId, active: true },
+        order: { createdAt: 'DESC' },
+      });
+    } catch (error: any) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
   // Actualizar una recompensa
   async updateReward(
     businessId: number,

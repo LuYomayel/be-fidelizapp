@@ -533,6 +533,91 @@ export class StampService {
   }
 
   /**
+   * Obtiene las tarjetas de un cliente con recompensas disponibles
+   */
+  async getClientCardsWithAvailableRewards(clientId: number): Promise<
+    Array<
+      ClientCard & {
+        nearestReward?: {
+          id: number;
+          name: string;
+          stampsCost: number;
+          description: string;
+        };
+        progressTarget: number;
+        availableRewards: Reward[];
+      }
+    >
+  > {
+    // Obtener todas las tarjetas del cliente
+    const clientCards = await this.clientCardRepository.find({
+      where: { clientId },
+      relations: ['business'],
+      order: { lastStampDate: 'DESC' },
+    });
+
+    // Procesar cada tarjeta para agregar información de recompensas
+    const clientCardsWithRewards = await Promise.all(
+      clientCards.map(async (clientCard) => {
+        // Obtener recompensas activas del negocio
+        const activeRewards = await this.rewardRepository.find({
+          where: {
+            businessId: clientCard.businessId,
+            active: true,
+          },
+          order: { stampsCost: 'DESC' }, // Ordenar por mayor cantidad de sellos requeridos
+        });
+
+        // Filtrar recompensas válidas (activas, no expiradas, con stock)
+        const now = new Date();
+        const validRewards = activeRewards.filter((reward) => {
+          // Verificar que no esté expirada (solo si tiene fecha de expiración)
+          if (reward.expirationDate && reward.expirationDate < now) {
+            console.log('reward expirada', reward.expirationDate);
+            return false;
+          }
+          // Verificar que tenga stock (solo si tiene stock definido y no es ilimitado)
+          if (
+            reward.stock !== undefined &&
+            reward.stock !== null &&
+            reward.stock !== -1 &&
+            reward.stock <= 0
+          ) {
+            console.log('reward en stock', reward.stock);
+            return false;
+          }
+          return true;
+        });
+        console.log('validRewards', validRewards);
+        // Encontrar la recompensa más cercana (que requiera menos sellos)
+        const nearestReward = validRewards.length > 0 ? validRewards[0] : null;
+
+        // Determinar el objetivo de progreso
+        let progressTarget = 10; // Por defecto 10 sellos
+        if (nearestReward) {
+          progressTarget = nearestReward.stampsCost;
+        }
+
+        return {
+          ...clientCard,
+          nearestReward: nearestReward
+            ? {
+                id: nearestReward.id,
+                name: nearestReward.name,
+                stampsCost: nearestReward.stampsCost,
+                description: nearestReward.description,
+              }
+            : undefined,
+          progressTarget,
+          availableRewards: validRewards,
+        };
+      }),
+    );
+
+    return clientCardsWithRewards;
+  }
+
+  /**
    * Obtiene una tarjeta específica de un cliente para un negocio
    */
   async getClientCard(

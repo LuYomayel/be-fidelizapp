@@ -34,6 +34,7 @@ import {
   IReward,
   BusinessRequest,
   RewardType,
+  ClientRequest,
 } from '@shared';
 
 @ApiTags('rewards')
@@ -128,6 +129,29 @@ export class RewardController {
     try {
       const businessId = req.user.userId;
       const rewards = await this.rewardService.getBusinessRewards(businessId);
+
+      return {
+        success: true,
+        data: rewards,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('client-available-rewards')
+  @ApiOperation({ summary: 'Obtener recompensas disponibles para un cliente' })
+  @ApiResponse({ status: 200, description: 'Recompensas disponibles' })
+  async getClientAvailableRewards(
+    @Request() req: ClientRequest,
+  ): Promise<CustomApiResponse<IReward[]>> {
+    try {
+      const clientId = req.user.userId;
+      const rewards =
+        await this.rewardService.getClientAvailableRewards(clientId);
 
       return {
         success: true,

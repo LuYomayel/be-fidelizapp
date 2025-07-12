@@ -163,7 +163,9 @@ export class ClientCardController {
     @Request() req: ClientRequest,
   ): Promise<{ success: boolean; data: any; message: string }> {
     const clientId = req.user.userId;
-    const cards = await this.stampService.getClientCards(clientId);
+    //const cards = await this.stampService.getClientCards(clientId);
+    const cards =
+      await this.stampService.getClientCardsWithAvailableRewards(clientId);
 
     return {
       success: true,
