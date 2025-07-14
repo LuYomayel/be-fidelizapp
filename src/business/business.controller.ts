@@ -127,6 +127,10 @@ export class BusinessController {
           cb(null, 'logo-' + uniqueSuffix + extname(file.originalname));
         },
       }),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB máximo
+        files: 1,
+      },
       fileFilter: (req, file, cb) => {
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
           return cb(new Error('Solo se permiten archivos de imagen'), false);
@@ -478,8 +482,12 @@ export class BusinessController {
           cb(null, 'logo-' + uniqueSuffix + extname(file.originalname));
         },
       }),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB máximo
+        files: 1,
+      },
       fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
           return cb(new Error('Solo se permiten archivos de imagen'), false);
         }
         cb(null, true);

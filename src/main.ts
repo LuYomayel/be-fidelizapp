@@ -29,11 +29,25 @@ async function bootstrap() {
     }),
   );
 
+  // Configuración de CORS más robusta
+  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+  console.log('CORS_ORIGIN', corsOrigin);
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: corsOrigin,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Cache-Control',
+    ],
+    exposedHeaders: ['Content-Length', 'X-Requested-With'],
+    maxAge: 86400, // 24 horas
   });
-  console.log('CORS_ORIGIN', process.env.CORS_ORIGIN);
   // Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('FidelizApp API')

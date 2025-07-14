@@ -32,6 +32,7 @@ import {
 } from '@shared';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { handleMulterError } from '../common/middleware/multer-error.middleware';
 
 @ApiTags('Business Profile')
 @Controller('business/profile')
@@ -130,6 +131,10 @@ export class ProfileController {
           cb(null, 'logo-' + uniqueSuffix + extname(file.originalname));
         },
       }),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB máximo
+        files: 1,
+      },
       fileFilter: (req, file, cb) => {
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
           return cb(new Error('Solo se permiten archivos de imagen'), false);
@@ -153,16 +158,7 @@ export class ProfileController {
         message: 'Logo actualizado exitosamente',
       };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Error desconocido';
-      throw new HttpException(
-        {
-          success: false,
-          message: errorMessage || 'Error al actualizar el logo',
-          error: errorMessage,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
+      handleMulterError(error);
     }
   }
 
