@@ -33,7 +33,7 @@ async function bootstrap() {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     credentials: true,
   });
-
+  console.log('CORS_ORIGIN', process.env.CORS_ORIGIN);
   // Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('FidelizApp API')
