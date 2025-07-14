@@ -149,38 +149,8 @@ export class ClientProfileService {
       throw new NotFoundException('Cliente no encontrado');
     }
 
-    // Validar email único si se está actualizando
-    if (updateData.email && updateData.email !== client.email) {
-      const existingClient = await this.clientRepository.findOne({
-        where: { email: updateData.email },
-      });
-      if (existingClient) {
-        throw new BadRequestException('El email ya está en uso');
-      }
-    }
-
-    // Si se está actualizando la contraseña, validar la actual
-    if (updateData.password && updateData.currentPassword && client.password) {
-      const isCurrentPasswordValid = await bcrypt.compare(
-        updateData.currentPassword,
-        client.password,
-      );
-
-      if (!isCurrentPasswordValid) {
-        throw new BadRequestException('Contraseña actual incorrecta');
-      }
-
-      // Hashear nueva contraseña
-      updateData.password = await bcrypt.hash(updateData.password, 10);
-    }
-
-    // Remover campos que no se deben actualizar directamente
-    const { currentPassword, ...dataToUpdate } = updateData;
-
-    void currentPassword; // Evitar error de linter
-
     // Actualizar campos
-    Object.assign(client, dataToUpdate);
+    Object.assign(client, updateData);
     client.updatedAt = new Date();
 
     await this.clientRepository.save(client);

@@ -9,6 +9,8 @@ import { RewardService } from './reward.service';
 import { RewardController } from './reward.controller';
 import { StampConfigService } from './stamp-config.service';
 import { StampConfigController } from './stamp-config.controller';
+import { EmployeeService } from './employee.service';
+import { EmployeeController } from './employee.controller';
 import { TestController } from '../test.controller';
 import { Business } from './entities/business.entity';
 import { Stamp } from './entities/stamp.entity';
@@ -16,6 +18,7 @@ import { Reward } from './entities/reward.entity';
 import { RewardRedemption } from './entities/reward-redemption.entity';
 import { StampConfig } from './entities/stamp-config.entity';
 import { StampRule } from './entities/stamp-rule.entity';
+import { Employee } from './entities/employee.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
 import { Client } from '../clients/entities/client.entity';
 import { StampRedemption } from '../clients/entities/stamp-redemption.entity';
@@ -33,6 +36,7 @@ import { MulterModule } from '@nestjs/platform-express';
       RewardRedemption,
       StampConfig,
       StampRule,
+      Employee,
       ClientCard,
       Client,
       StampRedemption,
@@ -50,6 +54,7 @@ import { MulterModule } from '@nestjs/platform-express';
     StampService,
     RewardService,
     StampConfigService,
+    EmployeeService,
     ProfileService,
   ],
   controllers: [
@@ -57,6 +62,7 @@ import { MulterModule } from '@nestjs/platform-express';
     StampController,
     RewardController,
     StampConfigController,
+    EmployeeController,
     TestController,
     ProfileController,
   ],
@@ -65,6 +71,7 @@ import { MulterModule } from '@nestjs/platform-express';
     StampService,
     RewardService,
     StampConfigService,
+    EmployeeService,
     ProfileService,
     TypeOrmModule, // Exportar TypeOrmModule para que otros módulos puedan usar los repositorios
   ],

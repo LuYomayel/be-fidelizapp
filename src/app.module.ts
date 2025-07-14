@@ -12,6 +12,7 @@ import { Client } from './clients/entities/client.entity';
 import { Stamp } from './business/entities/stamp.entity';
 import { Reward } from './business/entities/reward.entity';
 import { RewardRedemption } from './business/entities/reward-redemption.entity';
+import { Employee } from './business/entities/employee.entity';
 import { ClientCard } from './clients/entities/client-card.entity';
 import { StampRedemption } from './clients/entities/stamp-redemption.entity';
 import { VerificationCode } from './clients/entities/verification-code.entity';
@@ -38,6 +39,7 @@ import { VerificationCode } from './clients/entities/verification-code.entity';
             Stamp,
             Reward,
             RewardRedemption,
+            Employee,
             ClientCard,
             StampRedemption,
             VerificationCode,

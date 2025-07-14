@@ -44,6 +44,9 @@ export class BusinessService {
     createBusinessDto: CreateBusinessDto,
     logoPath?: string,
   ): Promise<Business> {
+    console.log('🔍 DEBUG - BusinessService.create:');
+    console.log('- logoPath recibido:', logoPath);
+
     const existingBusiness = await this.businessRepository.findOne({
       where: { email: createBusinessDto.email },
     });
@@ -57,13 +60,24 @@ export class BusinessService {
     if (createBusinessDto.type !== BusinessType.OTRO) {
       createBusinessDto.customType = undefined;
     }
-    const business = this.businessRepository.create({
+
+    const businessData = {
       ...createBusinessDto,
       password: hashedPassword,
       logoPath: logoPath || undefined,
+    };
+
+    console.log('- businessData a guardar:', {
+      ...businessData,
+      password: '[HIDDEN]',
     });
 
-    return await this.businessRepository.save(business);
+    const business = this.businessRepository.create(businessData);
+    const savedBusiness = await this.businessRepository.save(business);
+
+    console.log('- business guardado con logoPath:', savedBusiness.logoPath);
+
+    return savedBusiness;
   }
 
   async findAll(): Promise<Business[]> {

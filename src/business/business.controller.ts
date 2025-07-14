@@ -51,17 +51,66 @@ export class BusinessController {
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    type: CreateBusinessDto,
     description: 'Datos del negocio a registrar',
+    type: 'multipart/form-data',
+    schema: {
+      type: 'object',
+      properties: {
+        businessName: { type: 'string' },
+        email: { type: 'string', format: 'email' },
+        password: { type: 'string' },
+        size: { type: 'string', enum: ['SMALL', 'MEDIUM', 'LARGE'] },
+        street: { type: 'string' },
+        neighborhood: { type: 'string' },
+        postalCode: { type: 'string' },
+        province: { type: 'string' },
+        type: {
+          type: 'string',
+          enum: ['CAFETERIA', 'RESTAURANTE', 'PANADERIA', 'OTRO'],
+        },
+        customType: { type: 'string' },
+        internalPhone: { type: 'string' },
+        externalPhone: { type: 'string' },
+        instagram: { type: 'string' },
+        tiktok: { type: 'string' },
+        website: { type: 'string' },
+        logo: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 201,
-    description: 'Negocio registrado exitosamente',
+    description: 'Negocio registrado exitosamente con autenticación automática',
     schema: {
       type: 'object',
       properties: {
         success: { type: 'boolean' },
-        data: { type: 'object' },
+        data: {
+          type: 'object',
+          properties: {
+            business: {
+              type: 'object',
+              properties: {
+                id: { type: 'number' },
+                email: { type: 'string' },
+                businessName: { type: 'string' },
+                type: { type: 'string' },
+                customType: { type: 'string' },
+                logoPath: { type: 'string' },
+              },
+            },
+            tokens: {
+              type: 'object',
+              properties: {
+                accessToken: { type: 'string' },
+                refreshToken: { type: 'string' },
+              },
+            },
+          },
+        },
         message: { type: 'string' },
       },
     },
@@ -91,14 +140,51 @@ export class BusinessController {
     @UploadedFile() logo?: Express.Multer.File,
   ) {
     try {
+      console.log('🔍 DEBUG - Registro de negocio:');
+      console.log('- createBusinessDto:', createBusinessDto);
+      console.log(
+        '- logo recibido:',
+        logo
+          ? {
+              fieldname: logo.fieldname,
+              originalname: logo.originalname,
+              encoding: logo.encoding,
+              mimetype: logo.mimetype,
+              size: logo.size,
+              destination: logo.destination,
+              filename: logo.filename,
+              path: logo.path,
+            }
+          : 'No logo',
+      );
+
       const logoPath = logo ? logo?.path : undefined;
+      console.log('- logoPath final:', logoPath);
+
       const business = await this.businessService.create(
         createBusinessDto,
         logoPath,
       );
+
+      // Generar token JWT automáticamente después del registro
+      const token = this.businessService.generateToken(business);
+
       return {
         success: true,
-        data: business,
+        data: {
+          business: {
+            id: business.id,
+            email: business.email,
+            businessName: business.businessName,
+            type: business.type,
+            customType: business.customType,
+            logoPath: business.logoPath,
+          },
+          tokens: {
+            accessToken: token,
+            refreshToken: token, // Por ahora usar el mismo token
+          },
+        },
         message: 'Negocio registrado exitosamente',
       };
     } catch (error) {

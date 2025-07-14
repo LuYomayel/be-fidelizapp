@@ -84,6 +84,7 @@ export class StampController {
   ): Promise<{ success: boolean; data: any; message: string }> {
     const businessId = req.user.userId;
     // Crear DTO compatible basado en valor de venta
+    console.log('quickStampDto', quickStampDto);
     const createStampDto: CreateStampDto = {
       stampType: 'compra' as any,
       stampValue:
@@ -92,8 +93,7 @@ export class StampController {
           : quickStampDto.saleValue >= 1500
             ? 2
             : 1,
-      description:
-        quickStampDto.description || `Venta por $${quickStampDto.saleValue}`,
+      description: quickStampDto.description || `Sello de fidelización`,
     };
     console.log('createStampDto', createStampDto);
     const stamp = await this.stampService.createStamp(

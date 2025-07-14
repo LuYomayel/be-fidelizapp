@@ -49,7 +49,6 @@ export class ProfileController {
     @Req() req: BusinessRequest,
   ): Promise<ApiResponseType<IBusinessProfile>> {
     try {
-      console.log('req.user', req.user);
       const profile = await this.profileService.getBusinessProfile(
         req.user.businessId,
       );
@@ -58,11 +57,13 @@ export class ProfileController {
         data: profile,
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
       throw new HttpException(
         {
           success: false,
           message: 'Error al obtener el perfil',
-          error: error.message,
+          error: errorMessage,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -90,11 +91,13 @@ export class ProfileController {
         message: 'Perfil actualizado exitosamente',
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
       throw new HttpException(
         {
           success: false,
           message: 'Error al actualizar el perfil',
-          error: error.message,
+          error: errorMessage,
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -137,7 +140,7 @@ export class ProfileController {
   )
   async updateLogo(
     @UploadedFile() logo: Express.Multer.File,
-    @Req() req: any,
+    @Req() req: BusinessRequest,
   ): Promise<ApiResponseType<IBusinessProfile>> {
     try {
       const profile = await this.profileService.updateBusinessLogo(
@@ -150,11 +153,13 @@ export class ProfileController {
         message: 'Logo actualizado exitosamente',
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
       throw new HttpException(
         {
           success: false,
-          message: error.message || 'Error al actualizar el logo',
-          error: error.message,
+          message: errorMessage || 'Error al actualizar el logo',
+          error: errorMessage,
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -181,11 +186,13 @@ export class ProfileController {
         message: 'Contraseña cambiada exitosamente',
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
       throw new HttpException(
         {
           success: false,
-          message: error.message || 'Error al cambiar la contraseña',
-          error: error.message,
+          message: errorMessage || 'Error al cambiar la contraseña',
+          error: errorMessage,
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -211,11 +218,13 @@ export class ProfileController {
         message: 'QR generado exitosamente',
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
       throw new HttpException(
         {
           success: false,
           message: 'Error al generar el QR',
-          error: error.message,
+          error: errorMessage,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -240,11 +249,13 @@ export class ProfileController {
         data: settings,
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
       throw new HttpException(
         {
           success: false,
           message: 'Error al obtener las configuraciones',
-          error: error.message,
+          error: errorMessage,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -272,11 +283,13 @@ export class ProfileController {
         message: 'Configuraciones actualizadas exitosamente',
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
       throw new HttpException(
         {
           success: false,
           message: 'Error al actualizar las configuraciones',
-          error: error.message,
+          error: errorMessage,
         },
         HttpStatus.BAD_REQUEST,
       );

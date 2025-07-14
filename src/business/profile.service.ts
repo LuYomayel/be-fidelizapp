@@ -98,39 +98,34 @@ export class ProfileService {
     businessId: number,
     file: Express.Multer.File,
   ): Promise<IBusinessProfile> {
-    try {
-      if (!file) {
-        throw new BadRequestException('No se proporcionó archivo de logo');
-      }
-
-      const business = await this.businessRepository.findOne({
-        where: { id: businessId },
-      });
-
-      if (!business) {
-        throw new NotFoundException('Negocio no encontrado');
-      }
-
-      // Eliminar logo anterior si existe
-      if (business.logoPath) {
-        const oldLogoPath = path.join(process.cwd(), business.logoPath);
-        if (fs.existsSync(oldLogoPath)) {
-          fs.unlinkSync(oldLogoPath);
-        }
-      }
-
-      // El archivo ya se guardó automáticamente por diskStorage
-      // Solo necesitamos actualizar la ruta en la base de datos
-      // Asegurarnos de que la ruta sea relativa a la carpeta uploads
-      business.logoPath = file.path.replace(/^uploads\//, '');
-      business.updatedAt = new Date();
-      await this.businessRepository.save(business);
-
-      return this.getBusinessProfile(businessId);
-    } catch (error) {
-      console.log('error', error);
-      throw error;
+    if (!file) {
+      throw new BadRequestException('No se proporcionó archivo de logo');
     }
+
+    const business = await this.businessRepository.findOne({
+      where: { id: businessId },
+    });
+
+    if (!business) {
+      throw new NotFoundException('Negocio no encontrado');
+    }
+
+    // Eliminar logo anterior si existe
+    if (business.logoPath) {
+      const oldLogoPath = path.join(process.cwd(), business.logoPath);
+      if (fs.existsSync(oldLogoPath)) {
+        fs.unlinkSync(oldLogoPath);
+      }
+    }
+
+    // El archivo ya se guardó automáticamente por diskStorage
+    // Solo necesitamos actualizar la ruta en la base de datos
+    // Asegurarnos de que la ruta sea relativa a la carpeta uploads
+    business.logoPath = file.path.replace(/^uploads\//, '');
+    business.updatedAt = new Date();
+    await this.businessRepository.save(business);
+
+    return this.getBusinessProfile(businessId);
   }
 
   async changeBusinessPassword(

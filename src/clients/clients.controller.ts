@@ -21,9 +21,7 @@ import {
   LoginClientDto,
 } from '../common/dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { LocalClientAuthGuard } from '../auth/local-auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { ClientRequest } from '@shared';
 
 @ApiTags('clients')
 @Controller('clients')
@@ -40,28 +38,21 @@ export class ClientsController {
   @ApiResponse({ status: 201, description: 'Cliente registrado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 409, description: 'El email ya está registrado' })
-  async create(@Body() createClientDto: CreateClientDto) {
+  async register(@Body() createClientDto: CreateClientDto) {
     try {
-      const result = await this.clientsService.create(createClientDto);
+      const client = await this.clientsService.create(createClientDto);
       return {
         success: true,
-        data: {
-          client: result.client,
-          requiresVerification: result.requiresVerification,
-        },
-        message: result.requiresVerification
-          ? 'Cliente registrado. Verifica tu email para completar el registro.'
-          : 'Cliente registrado exitosamente',
+        data: client,
+        message: 'Cliente registrado exitosamente',
       };
     } catch (error: any) {
-      console.log(error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error al registrar cliente';
       return {
         success: false,
         data: null,
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Error al registrar el cliente',
+        message: errorMessage,
       };
     }
   }
@@ -80,20 +71,24 @@ export class ClientsController {
   })
   @ApiResponse({ status: 200, description: 'Email verificado correctamente' })
   @ApiResponse({ status: 400, description: 'Código inválido o expirado' })
-  async verifyEmail(@Body() body: { email: string; code: string }) {
+  async verifyEmail(@Body() verifyEmailDto: { email: string; code: string }) {
     try {
       const result = await this.clientsService.verifyEmail(
-        body.email,
-        body.code,
+        verifyEmailDto.email,
+        verifyEmailDto.code,
       );
       return {
-        success: result.success,
-        message: result.message,
+        success: true,
+        data: result,
+        message: 'Email verificado exitosamente',
       };
     } catch (error: any) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error al verificar email';
       return {
         success: false,
-        message: error.message || 'Error al verificar el email',
+        data: null,
+        message: errorMessage,
       };
     }
   }
@@ -111,17 +106,21 @@ export class ClientsController {
   })
   @ApiResponse({ status: 200, description: 'Código de verificación reenviado' })
   @ApiResponse({ status: 404, description: 'Cliente no encontrado' })
-  async resendVerification(@Body() body: { email: string }) {
+  async resendVerification(@Body() resendDto: { email: string }) {
     try {
-      await this.clientsService.sendVerificationCode(body.email);
+      await this.clientsService.sendVerificationCode(resendDto.email);
       return {
         success: true,
-        message: 'Código de verificación reenviado',
+        data: null,
+        message: 'Código de verificación enviado',
       };
     } catch (error: any) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error al enviar código';
       return {
         success: false,
-        message: error.message || 'Error al reenviar el código',
+        data: null,
+        message: errorMessage,
       };
     }
   }
@@ -138,19 +137,23 @@ export class ClientsController {
     },
   })
   @ApiResponse({ status: 200, description: 'Código de recuperación enviado' })
-  async forgotPassword(@Body() body: { email: string }) {
+  async forgotPassword(@Body() forgotPasswordDto: { email: string }) {
     try {
       const result = await this.clientsService.sendPasswordResetCode(
-        body.email,
+        forgotPasswordDto.email,
       );
       return {
         success: result.success,
+        data: null,
         message: result.message,
       };
     } catch (error: any) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error al enviar código';
       return {
         success: false,
-        message: error.message || 'Error al enviar el código de recuperación',
+        data: null,
+        message: errorMessage,
       };
     }
   }
@@ -194,17 +197,27 @@ export class ClientsController {
     }
   }
 
-  @UseGuards(LocalClientAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión de cliente' })
   @ApiBody({ type: LoginClientDto })
   @ApiResponse({ status: 200, description: 'Inicio de sesión exitoso' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
-  async login(@Request() req: ClientRequest) {
+  async login(@Body() loginClientDto: LoginClientDto) {
     try {
-      console.log('req.user', req.user);
-      const client = req.user;
+      // Validar credenciales directamente sin usar guard
+      const client = await this.clientsService.validateClient(
+        loginClientDto.email,
+        loginClientDto.password,
+      );
+
+      if (!client) {
+        return {
+          success: false,
+          data: null,
+          message: 'Credenciales inválidas',
+        };
+      }
 
       // Verificar si el email está verificado
       /* Por el momento no se verifica el email
@@ -220,7 +233,16 @@ export class ClientsController {
       */
 
       // Usar el método loginClient del AuthService
-      const result = this.authService.loginClient(client);
+      const clientUser = {
+        userId: client.id,
+        username: `${client.firstName || ''} ${client.lastName || ''}`.trim(),
+        email: client.email,
+        emailVerified: client.emailVerified,
+        provider: client.provider as 'email' | 'google',
+      };
+
+      const result = this.authService.loginClient(clientUser);
+
       return {
         success: true,
         data: {
@@ -234,20 +256,34 @@ export class ClientsController {
         message: 'Inicio de sesión exitoso',
       };
     } catch (error: any) {
+      console.error('Error en login de cliente:', error);
       return {
         success: false,
         data: null,
-        message: error.message || 'Error al iniciar sesión',
+        message: 'Error al iniciar sesión',
       };
     }
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  @ApiOperation({ summary: 'Obtener todos los clientes' })
-  @ApiResponse({ status: 200, description: 'Lista de clientes' })
-  findAll() {
-    return this.clientsService.findAll();
+  async findAll() {
+    try {
+      const clients = await this.clientsService.findAll();
+      return {
+        success: true,
+        data: clients,
+        message: 'Clientes obtenidos exitosamente',
+      };
+    } catch (error: any) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error al obtener clientes';
+      return {
+        success: false,
+        data: null,
+        message: errorMessage,
+      };
+    }
   }
 
   @UseGuards(JwtAuthGuard)

@@ -12,6 +12,7 @@ import {
 } from './entities/reward-redemption.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
 import { Business } from './entities/business.entity';
+import { Employee } from './entities/employee.entity';
 import {
   IRedemptionTicket,
   IRedemptionDashboard,
@@ -32,6 +33,8 @@ export class RewardService {
     private clientCardRepository: Repository<ClientCard>,
     @InjectRepository(Business)
     private businessRepository: Repository<Business>,
+    @InjectRepository(Employee)
+    private employeeRepository: Repository<Employee>,
   ) {}
 
   // Generar código único de 8 caracteres
@@ -130,29 +133,43 @@ export class RewardService {
 
   // Obtener recompensas de un negocio
   async getBusinessRewards(businessId: number): Promise<Reward[]> {
-    return this.rewardRepository.find({
-      where: { businessId },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  // Obtener recompensas disponibles para un cliente
-  async getClientAvailableRewards(clientId: number): Promise<Reward[]> {
     try {
-      const clientCard = await this.clientCardRepository.findOne({
-        where: { clientId },
-        relations: ['business'],
-      });
-      if (!clientCard) {
-        throw new NotFoundException('Cliente no tiene tarjeta en este negocio');
-      }
-      return await this.rewardRepository.find({
-        where: { businessId: clientCard.businessId, active: true },
+      const rewards = await this.rewardRepository.find({
+        where: { businessId },
         order: { createdAt: 'DESC' },
       });
+
+      const rewardsWithClientCard = await Promise.all(
+        rewards.map((reward) => this.checkRewardStockAndExpirationDate(reward)),
+      );
+
+      return rewardsWithClientCard;
     } catch (error: any) {
       throw new BadRequestException(error.message);
     }
+  }
+
+  // Verificar stock y fecha de expiración de una recompensa
+
+  private async checkRewardStockAndExpirationDate(
+    reward: Reward,
+  ): Promise<Reward> {
+    if (reward.expirationDate && reward.expirationDate < new Date()) {
+      console.log('Recompensa expirada', reward.name);
+      reward.active = false;
+      await this.rewardRepository.save(reward);
+    }
+    if (
+      reward.stock !== undefined &&
+      reward.stock !== null &&
+      reward.stock !== -1 &&
+      reward.stock <= 0
+    ) {
+      console.log('Recompensa sin stock', reward.name);
+      reward.active = false;
+      await this.rewardRepository.save(reward);
+    }
+    return reward;
   }
 
   // Actualizar una recompensa
@@ -212,7 +229,7 @@ export class RewardService {
       }
 
       // Soft delete - marcar como inactiva en lugar de eliminar
-      reward.active = false;
+      reward.active = !reward.active;
       await this.rewardRepository.save(reward);
       return reward;
     } catch (error: any) {
@@ -299,6 +316,9 @@ export class RewardService {
     // Actualizar stock de la recompensa
     if (reward && reward.stock) {
       reward.stock -= 1;
+      if (reward.stock <= 0) {
+        reward.active = false;
+      }
       await this.rewardRepository.save(reward);
     }
 
@@ -402,10 +422,22 @@ export class RewardService {
       throw new BadRequestException('El código de reclamo ha expirado');
     }
 
+    // Obtener el empleado
+    const employee = await this.employeeRepository.findOne({
+      where: {
+        id: deliveryData.employeeId,
+        businessId,
+      },
+    });
+
+    if (!employee) {
+      throw new NotFoundException('Empleado no encontrado');
+    }
+
     // Marcar como entregado
     redemption.status = RedemptionStatus.DELIVERED;
     redemption.deliveredAt = new Date();
-    redemption.deliveredBy = deliveryData.deliveredBy;
+    redemption.deliveredBy = `${employee.firstName} ${employee.lastName}`;
     if (deliveryData.notes) {
       redemption.notes = deliveryData.notes;
     }

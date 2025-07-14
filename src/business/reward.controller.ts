@@ -142,29 +142,6 @@ export class RewardController {
     }
   }
 
-  @Get('client-available-rewards')
-  @ApiOperation({ summary: 'Obtener recompensas disponibles para un cliente' })
-  @ApiResponse({ status: 200, description: 'Recompensas disponibles' })
-  async getClientAvailableRewards(
-    @Request() req: ClientRequest,
-  ): Promise<CustomApiResponse<IReward[]>> {
-    try {
-      const clientId = req.user.userId;
-      const rewards =
-        await this.rewardService.getClientAvailableRewards(clientId);
-
-      return {
-        success: true,
-        data: rewards,
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
   @Put(':rewardId')
   @ApiOperation({ summary: 'Actualizar una recompensa' })
   @ApiResponse({
@@ -222,7 +199,7 @@ export class RewardController {
   async deleteReward(
     @Request() req: BusinessRequest,
     @Param('rewardId', ParseIntPipe) rewardId: number,
-  ): Promise<CustomApiResponse<void>> {
+  ): Promise<CustomApiResponse<IReward | null>> {
     try {
       const businessId = req.user.userId;
       const reward = await this.rewardService.deleteReward(
@@ -235,7 +212,10 @@ export class RewardController {
 
       return {
         success: true,
-        message: 'Recompensa eliminada exitosamente',
+        data: reward,
+        message: reward.active
+          ? 'Recompensa activada exitosamente'
+          : 'Recompensa desactivada exitosamente',
       };
     } catch (error: any) {
       return {
@@ -395,13 +375,13 @@ export class RewardController {
   async deliverRedemption(
     @Request() req,
     @Param('redemptionId', ParseIntPipe) redemptionId: number,
-    @Body() body: { deliveredBy: string; notes?: string },
+    @Body() body: { employeeId: number; notes?: string },
   ): Promise<CustomApiResponse<any>> {
     try {
       const businessId = req.user.userId;
       const deliveryData: IDeliverRedemptionDto = {
         redemptionId,
-        deliveredBy: body.deliveredBy,
+        employeeId: body.employeeId,
         notes: body.notes,
       };
 
