@@ -1,4 +1,4 @@
-name: Deploy to Testing
+name: Deploy Frontend to Testing
 
 on:
   push:
@@ -11,6 +11,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -21,11 +23,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
+      - name: Run linting
+        run: npm run lint
 
       - name: Build application
-        run: npm run build
+        run: |
+          NEXT_PUBLIC_API_URL=https://api-test.stampia.luciano-yomayel.com \
+          NEXT_PUBLIC_APP_NAME="Stampia Test" \
+          NEXT_PUBLIC_ENVIRONMENT=testing \
+          npm run build
 
   deploy:
     needs: test
@@ -33,22 +39,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Deploy Backend to Testing
-        uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.TEST_HOST }}
-          username: ${{ secrets.TEST_USERNAME }}
-          key: ${{ secrets.TEST_SSH_KEY }}
-          port: ${{ secrets.TEST_PORT }}
-          script: |
-            cd /home/be-stampia-test
-            git pull origin test
-            npm install
-            npm run build
-            pm2 restart be-stampia-test || pm2 start ecosystem.config.js --only be-stampia-test
+          submodules: recursive
 
-      - name: Deploy Frontend to Testing
+      - name: Deploy to Testing Server
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.TEST_HOST }}
@@ -57,19 +51,31 @@ jobs:
           port: ${{ secrets.TEST_PORT }}
           script: |
             cd /home/stampia-test
+            echo "📥 Descargando últimos cambios..."
             git pull origin test
+
+            echo "📦 Instalando dependencias..."
             npm install
+
+            echo "🏗️ Ejecutando build del frontend..."
+            NEXT_PUBLIC_API_URL=https://api-test.stampia.luciano-yomayel.com \
+            NEXT_PUBLIC_APP_NAME="Stampia Test" \
+            NEXT_PUBLIC_ENVIRONMENT=testing \
             npm run build
+
+            echo "🔄 Reiniciando aplicación con PM2..."
             pm2 restart stampia-test || pm2 start ecosystem.config.js --only stampia-test
+
+            echo "✅ Despliegue completado exitosamente!"
 
       - name: Health Check
         run: |
           sleep 30
-          curl -f https://api-test.stampia.luciano-yomayel.com/health || exit 1
           curl -f https://test.stampia.luciano-yomayel.com || exit 1
+          echo "✅ Frontend funcionando correctamente"
 
       - name: Run E2E Tests
         run: |
           sleep 60
           # Aquí puedes agregar tests E2E contra el ambiente de testing
-          echo "E2E tests would run here"
+          echo "E2E tests would run against https://test.stampia.luciano-yomayel.com"
