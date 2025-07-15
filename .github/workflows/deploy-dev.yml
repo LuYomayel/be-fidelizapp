@@ -1,0 +1,59 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy Backend to Development
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USERNAME }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_PORT }}
+          script: |
+            cd /home/be-stampia-dev
+            git pull origin dev
+            npm install
+            npm run build
+            pm2 restart be-stampia-dev || pm2 start ecosystem.config.js --only be-stampia-dev
+
+      - name: Deploy Frontend to Development
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USERNAME }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_PORT }}
+          script: |
+            cd /home/stampia-dev
+            git pull origin dev
+            npm install
+            npm run build
+            pm2 restart stampia-dev || pm2 start ecosystem.config.js --only stampia-dev
+
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -f https://api-dev.stampia.luciano-yomayel.com/health || exit 1
+          curl -f https://dev.stampia.luciano-yomayel.com || exit 1

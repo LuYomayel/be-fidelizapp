@@ -1,0 +1,88 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests
+        run: |
+          # Aquí puedes agregar tests E2E antes de producción
+          echo "E2E tests would run here"
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy Backend to Production
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
+          script: |
+            cd /home/be-stampia-prod
+            git pull origin main
+            npm install
+            npm run build
+            pm2 restart be-stampia-prod || pm2 start ecosystem.config.js --only be-stampia-prod
+
+      - name: Deploy Frontend to Production
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
+          script: |
+            cd /home/stampia-prod
+            git pull origin main
+            npm install
+            npm run build
+            pm2 restart stampia-prod || pm2 start ecosystem.config.js --only stampia-prod
+
+      - name: Health Check
+        run: |
+          sleep 30
+          curl -f https://api.stampia.luciano-yomayel.com/health || exit 1
+          curl -f https://stampia.luciano-yomayel.com || exit 1
+
+      - name: Smoke Tests
+        run: |
+          sleep 60
+          # Aquí puedes agregar smoke tests en producción
+          echo "Smoke tests would run here"
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "🚀 Deployment to production successful!"
+          echo "Frontend: https://stampia.luciano-yomayel.com"
+          echo "Backend: https://api.stampia.luciano-yomayel.com"
