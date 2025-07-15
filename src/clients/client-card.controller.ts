@@ -40,7 +40,7 @@ export class ClientCardController {
   @ApiOperation({
     summary: '🎟️ Canjear código de sello',
     description:
-      'Permite a un cliente canjear un código de 6 dígitos para obtener sellos en su tarjeta de fidelización.',
+      'Permite a un cliente canjear un código de 6 dígitos para obtener sellos en su tarjeta de sellos.',
   })
   @ApiBody({ type: RedeemStampDto })
   @ApiResponse({
@@ -122,7 +122,7 @@ export class ClientCardController {
   @ApiOperation({
     summary: '💳 Obtener todas las tarjetas',
     description:
-      'Obtiene todas las tarjetas de fidelización del cliente con información detallada de cada negocio. Incluye la recompensa más cercana a canjear y el progreso necesario para cada negocio.',
+      'Obtiene todas las tarjetas de sellos del cliente con información detallada de cada negocio. Incluye la recompensa más cercana a canjear y el progreso necesario para cada negocio.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -245,7 +245,7 @@ export class ClientCardController {
   @ApiOperation({
     summary: '🏪 Obtener tarjeta por negocio',
     description:
-      'Obtiene la tarjeta de fidelización específica del cliente para un negocio determinado.',
+      'Obtiene la tarjeta de sellos específica del cliente para un negocio determinado.',
   })
   @ApiParam({
     name: 'businessId',

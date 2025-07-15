@@ -1,4 +1,4 @@
-name: Deploy Frontend to Development
+name: Deploy to Development
 
 on:
   push:
@@ -11,8 +11,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -24,13 +22,23 @@ jobs:
         run: npm ci
 
       - name: Build application
-        run: |
-          NEXT_PUBLIC_API_URL=https://api-dev.stampia.luciano-yomayel.com \
-          NEXT_PUBLIC_APP_NAME="Stampia Dev" \
-          NEXT_PUBLIC_ENVIRONMENT=development \
-          npm run build
+        run: npm run build
 
-      - name: Deploy to Development Server
+      - name: Deploy Backend to Development
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USERNAME }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_PORT }}
+          script: |
+            cd /home/be-stampia-dev
+            git pull origin dev
+            npm install
+            npm run build
+            pm2 restart be-stampia-dev || pm2 start ecosystem.config.js --only be-stampia-dev
+
+      - name: Deploy Frontend to Development
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.DEV_HOST }}
@@ -39,25 +47,13 @@ jobs:
           port: ${{ secrets.DEV_PORT }}
           script: |
             cd /home/stampia-dev
-            echo "📥 Descargando últimos cambios..."
             git pull origin dev
-
-            echo "📦 Instalando dependencias..."
             npm install
-
-            echo "🏗️ Ejecutando build del frontend..."
-            NEXT_PUBLIC_API_URL=https://api-dev.stampia.luciano-yomayel.com \
-            NEXT_PUBLIC_APP_NAME="Stampia Dev" \
-            NEXT_PUBLIC_ENVIRONMENT=development \
             npm run build
-
-            echo "🔄 Reiniciando aplicación con PM2..."
             pm2 restart stampia-dev || pm2 start ecosystem.config.js --only stampia-dev
-
-            echo "✅ Despliegue completado exitosamente!"
 
       - name: Health Check
         run: |
           sleep 30
+          curl -f https://api-dev.stampia.luciano-yomayel.com/health || exit 1
           curl -f https://dev.stampia.luciano-yomayel.com || exit 1
-          echo "✅ Frontend funcionando correctamente"

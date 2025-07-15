@@ -50,10 +50,10 @@ async function bootstrap() {
   });
   // Configuración de Swagger
   const config = new DocumentBuilder()
-    .setTitle('FidelizApp API')
+    .setTitle('Stampia API')
     .setDescription(
       `
-      ## 📱 API de FidelizApp - Sistema de Fidelización de Clientes
+      ## 📱 API de Stampia - Sistema de Sellos de Clientes
       
       ### Funcionalidades principales:
       - 🏪 **Gestión de Negocios**: Registro, autenticación y administración de negocios
@@ -91,7 +91,7 @@ async function bootstrap() {
       'Servidor de desarrollo',
     )
     .addServer(
-      'https://api-fidelizapp.luciano-yomayel.com',
+      'https://api-stampia.luciano-yomayel.com',
       'Servidor de producción',
     )
     .setContact(
@@ -114,7 +114,7 @@ async function bootstrap() {
       docExpansion: 'none',
       persistAuthorization: true,
     },
-    customSiteTitle: 'FidelizApp API Docs',
+    customSiteTitle: 'Stampia API Docs',
     customfavIcon: '/favicon.ico',
     customCss: `
       .swagger-ui .topbar { display: none; }
