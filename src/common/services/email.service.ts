@@ -19,9 +19,9 @@ export class EmailService {
 
   async sendVerificationEmail(email: string, code: string, name?: string) {
     const mailOptions = {
-      from: process.env.SMTP_FROM || 'noreply@fidelizapp.com',
+      from: process.env.SMTP_FROM || 'noreply@stampia.com',
       to: email,
-      subject: 'Verifica tu cuenta - FidelizApp',
+      subject: 'Verifica tu cuenta - Stampia',
       html: this.getVerificationEmailTemplate(code, name),
     };
 
@@ -44,9 +44,9 @@ export class EmailService {
 
   async sendPasswordResetEmail(email: string, code: string, name?: string) {
     const mailOptions = {
-      from: process.env.SMTP_FROM || 'noreply@fidelizapp.com',
+      from: process.env.SMTP_FROM || 'noreply@stampia.com',
       to: email,
-      subject: 'Recuperar contraseña - FidelizApp',
+      subject: 'Recuperar contraseña - Stampia',
       html: this.getPasswordResetEmailTemplate(code, name),
     };
 
@@ -125,10 +125,10 @@ export class EmailService {
     <body>
         <div class="header">
             <h1>🎉 ¡Bienvenido${name ? ` ${name}` : ''}!</h1>
-            <p>Verifica tu cuenta en FidelizApp</p>
+            <p>Verifica tu cuenta en Stampia</p>
         </div>
         <div class="content">
-            <p>Gracias por registrarte en FidelizApp. Para completar tu registro, por favor verifica tu dirección de email usando el código de verificación a continuación:</p>
+            <p>Gracias por registrarte en Stampia. Para completar tu registro, por favor verifica tu dirección de email usando el código de verificación a continuación:</p>
             
             <div class="code-box">
                 <div class="code">${code}</div>
@@ -142,10 +142,10 @@ export class EmailService {
                 <li>Si no solicitaste este código, ignora este email</li>
             </ul>
             
-            <p>Una vez verificado tu email, podrás acceder a todas las funcionalidades de FidelizApp y comenzar a acumular puntos en tus negocios favoritos.</p>
+            <p>Una vez verificado tu email, podrás acceder a todas las funcionalidades de Stampia y comenzar a acumular puntos en tus negocios favoritos.</p>
         </div>
         <div class="footer">
-            <p>Este email fue enviado desde FidelizApp</p>
+            <p>Este email fue enviado desde Stampia</p>
             <p>Si no te registraste en nuestra plataforma, puedes ignorar este mensaje</p>
         </div>
     </body>
@@ -209,7 +209,7 @@ export class EmailService {
     <body>
         <div class="header">
             <h1>🔐 Recuperar Contraseña</h1>
-            <p>Restablece tu contraseña en FidelizApp</p>
+            <p>Restablece tu contraseña en Stampia</p>
         </div>
         <div class="content">
             <p>Hola${name ? ` ${name}` : ''},</p>
@@ -230,7 +230,7 @@ export class EmailService {
             <p>Si tienes problemas para restablecer tu contraseña, contacta a nuestro equipo de soporte.</p>
         </div>
         <div class="footer">
-            <p>Este email fue enviado desde FidelizApp</p>
+            <p>Este email fue enviado desde Stampia</p>
             <p>Si no solicitaste este cambio, puedes ignorar este mensaje</p>
         </div>
     </body>

@@ -1,6 +1,6 @@
-# FidelizApp Backend
+# Stampia Backend
 
-API Backend para la aplicación de fidelización de clientes desarrollada con NestJS, TypeORM y MySQL.
+API Backend para la aplicación de sellos de clientes desarrollada con NestJS, TypeORM y MySQL.
 
 ## Características
 
@@ -40,14 +40,14 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=password
-DB_NAME=fidelizapp
+DB_NAME=stampia
 JWT_SECRET=your-super-secret-jwt-key
 ```
 
 4. Asegúrate de tener MySQL ejecutándose y crea la base de datos:
 
 ```sql
-CREATE DATABASE fidelizapp;
+CREATE DATABASE stampia;
 ```
 
 5. Ejecuta la aplicación:
@@ -223,4 +223,4 @@ npm run start:prod
 3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
 4. Push al branch (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
-# be-fidelizapp
+# be-stampia

@@ -116,7 +116,7 @@ export class AuthController {
 
       // Construir URL de redirección con el token - PRODUCCIÓN
       const frontendUrl =
-        process.env.FRONTEND_URL || 'https://fidelizapp.luciano-yomayel.com';
+        process.env.FRONTEND_URL || 'https://stampia.luciano-yomayel.com';
       const redirectUrl = `${frontendUrl}/auth/google/callback?token=${loginResult.access_token}&user=${encodeURIComponent(JSON.stringify(loginResult.user))}`;
 
       console.log('🔗 Redirigiendo a:', redirectUrl);
@@ -124,7 +124,7 @@ export class AuthController {
     } catch (error) {
       console.error('❌ Error en callback de Google:', error);
       const frontendUrl =
-        process.env.FRONTEND_URL || 'https://fidelizapp.luciano-yomayel.com';
+        process.env.FRONTEND_URL || 'https://stampia.luciano-yomayel.com';
       const errorMessage =
         error instanceof Error ? error.message : 'Error de autenticación';
       res.redirect(

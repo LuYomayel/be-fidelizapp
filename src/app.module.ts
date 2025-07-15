@@ -32,7 +32,7 @@ import { VerificationCode } from './clients/entities/verification-code.entity';
           port: parseInt(configService.get<string>('DB_PORT') || '3306'),
           username: configService.get<string>('DB_USERNAME') || 'root',
           password: configService.get<string>('DB_PASSWORD') || 'password',
-          database: configService.get<string>('DB_NAME') || 'fidelizapp',
+          database: configService.get<string>('DB_NAME') || 'stampia',
           entities: [
             Business,
             Client,

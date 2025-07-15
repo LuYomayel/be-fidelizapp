@@ -93,7 +93,7 @@ export class StampController {
           : quickStampDto.saleValue >= 1500
             ? 2
             : 1,
-      description: quickStampDto.description || `Sello de fidelización`,
+      description: quickStampDto.description || `Sello de sellos`,
     };
     console.log('createStampDto', createStampDto);
     const stamp = await this.stampService.createStamp(
@@ -293,9 +293,9 @@ export class StampController {
 
   @Get('get-client-cards')
   @ApiOperation({
-    summary: '📋 Obtener todas las tarjetas de fidelización',
+    summary: '📋 Obtener todas las tarjetas de sellos',
     description:
-      'Obtiene todas las tarjetas de fidelización del negocio con paginación.',
+      'Obtiene todas las tarjetas de sellos del negocio con paginación.',
   })
   @ApiQuery({
     name: 'page',
@@ -311,7 +311,7 @@ export class StampController {
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Tarjetas de fidelización obtenidas exitosamente',
+    description: 'Tarjetas de sellos obtenidas exitosamente',
     schema: {
       example: {
         success: true,
@@ -336,7 +336,7 @@ export class StampController {
           page: 1,
           totalPages: 5,
         },
-        message: 'Tarjetas de fidelización obtenidas exitosamente',
+        message: 'Tarjetas de sellos obtenidas exitosamente',
       },
     },
   })
@@ -357,14 +357,14 @@ export class StampController {
           //page: page,
           //totalPages: Math.ceil(clientCards.length / limit),
         },
-        message: 'Tarjetas de fidelización obtenidas exitosamente',
+        message: 'Tarjetas de sellos obtenidas exitosamente',
       };
     } catch (error) {
       console.log(error);
       return {
         success: false,
         data: null,
-        message: 'Error al obtener las tarjetas de fidelización',
+        message: 'Error al obtener las tarjetas de sellos',
       };
     }
   }
@@ -373,7 +373,7 @@ export class StampController {
   @ApiOperation({
     summary: '👥 Obtener lista de clientes del negocio',
     description:
-      'Obtiene todos los clientes que han interactuado con el negocio, incluyendo información de fidelización.',
+      'Obtiene todos los clientes que han interactuado con el negocio, incluyendo información de sellos.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
