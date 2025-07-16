@@ -35,10 +35,10 @@ jobs:
       - name: Deploy Backend to Development
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.DEV_HOST }}
-          username: ${{ secrets.DEV_USERNAME }}
-          key: ${{ secrets.DEV_SSH_KEY }}
-          port: ${{ secrets.DEV_PORT }}
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
           script: |
             cd /home/be-stampia-dev
             git pull origin dev
