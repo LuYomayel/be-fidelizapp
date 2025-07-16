@@ -3,23 +3,31 @@ name: Deploy to Testing
 on:
   push:
     branches: [test]
-  workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Request shared update
+        run: |
+          cd shared
+          git pull origin main
+          cd ..
 
       - name: Run tests
         run: npm test
@@ -32,10 +40,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Deploy Backend to Testing
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.TEST_HOST }}
           username: ${{ secrets.TEST_USERNAME }}
@@ -48,25 +59,10 @@ jobs:
             npm run build
             pm2 restart be-stampia-test || pm2 start ecosystem.config.js --only be-stampia-test
 
-      - name: Deploy Frontend to Testing
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.TEST_HOST }}
-          username: ${{ secrets.TEST_USERNAME }}
-          key: ${{ secrets.TEST_SSH_KEY }}
-          port: ${{ secrets.TEST_PORT }}
-          script: |
-            cd /home/stampia-test
-            git pull origin test
-            npm install
-            npm run build
-            pm2 restart stampia-test || pm2 start ecosystem.config.js --only stampia-test
-
       - name: Health Check
         run: |
           sleep 30
           curl -f https://api-test.stampia.luciano-yomayel.com/health || exit 1
-          curl -f https://test.stampia.luciano-yomayel.com || exit 1
 
       - name: Run E2E Tests
         run: |
