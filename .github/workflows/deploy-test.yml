@@ -48,10 +48,10 @@ jobs:
       - name: Deploy Backend to Testing
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.TEST_HOST }}
-          username: ${{ secrets.TEST_USERNAME }}
-          key: ${{ secrets.TEST_SSH_KEY }}
-          port: ${{ secrets.TEST_PORT }}
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
           script: |
             cd /home/be-stampia-test
             git pull origin test
