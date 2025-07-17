@@ -336,6 +336,7 @@ export class ClientsService {
         profilePicture: googleUser.picture,
         provider: UserProvider.GOOGLE,
         emailVerified: true, // Los usuarios de Google ya tienen el email verificado
+        mustChangePassword: false, // Los usuarios de Google no necesitan cambiar contraseña
         isActive: true,
       });
 
@@ -366,6 +367,7 @@ export class ClientsService {
         client.googleId = googleUser.accessToken.substring(0, 50);
         client.profilePicture = googleUser.picture;
         client.emailVerified = true; // Los usuarios de Google ya tienen el email verificado
+        client.mustChangePassword = false; // Los usuarios de Google no necesitan cambiar contraseña
         client = await this.clientRepository.save(client);
         console.log('🔄 Cliente actualizado para Google OAuth');
       }
