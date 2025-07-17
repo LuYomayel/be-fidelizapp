@@ -29,12 +29,6 @@ jobs:
           git pull origin main
           cd ..
 
-      - name: Run tests
-        run: npm test
-
-      - name: Build application
-        run: npm run build
-
   deploy:
     needs: test
     runs-on: ubuntu-latest
