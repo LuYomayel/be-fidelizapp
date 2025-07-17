@@ -1,20 +1,130 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository } from 'typeorm';
+import { Business } from '../../business/entities/business.entity';
 import {
   VerificationCode,
   VerificationCodeType,
 } from '../../clients/entities/verification-code.entity';
+import { EmailService } from './email.service';
 
 @Injectable()
 export class VerificationCodeService {
   constructor(
+    @InjectRepository(Business)
+    private businessRepository: Repository<Business>,
     @InjectRepository(VerificationCode)
     private verificationCodeRepository: Repository<VerificationCode>,
+    private emailService: EmailService,
   ) {}
 
-  generateCode(): string {
+  generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  async generateAndSendVerificationCode(
+    business: Business,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const code = this.generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+      // Actualizar el negocio con el código de verificación
+      await this.businessRepository.update(business.id, {
+        emailVerificationCode: code,
+        emailVerificationCodeExpiry: expiresAt,
+      });
+
+      // Enviar email de verificación
+      const emailResult = await this.emailService.sendBusinessVerificationEmail(
+        business.email,
+        code,
+        business.businessName,
+        business.adminFirstName,
+      );
+      console.log('emailResult', emailResult);
+      return emailResult;
+    } catch (error) {
+      console.error('Error generating and sending verification code:', error);
+      return {
+        success: false,
+        message: 'Error al generar y enviar el código de verificación',
+      };
+    }
+  }
+
+  async verifyCode(
+    email: string,
+    code: string,
+  ): Promise<{ success: boolean; message: string; business?: Business }> {
+    const business = await this.businessRepository.findOne({
+      where: { email },
+    });
+
+    if (!business) {
+      return { success: false, message: 'Negocio no encontrado' };
+    }
+
+    if (business.emailVerified) {
+      return { success: false, message: 'El email ya está verificado' };
+    }
+
+    if (!business.emailVerificationCode) {
+      return {
+        success: false,
+        message: 'No hay código de verificación pendiente',
+      };
+    }
+
+    if (business.emailVerificationCode !== code) {
+      return { success: false, message: 'Código de verificación inválido' };
+    }
+
+    if (
+      business.emailVerificationCodeExpiry &&
+      business.emailVerificationCodeExpiry < new Date()
+    ) {
+      return {
+        success: false,
+        message: 'El código de verificación ha expirado',
+      };
+    }
+
+    // Marcar como verificado y limpiar el código
+    await this.businessRepository.update(business.id, {
+      emailVerified: true,
+      emailVerificationCode: undefined,
+      emailVerificationCodeExpiry: undefined,
+    });
+
+    // Obtener el negocio actualizado
+    const updatedBusiness = await this.businessRepository.findOne({
+      where: { email },
+    });
+
+    return {
+      success: true,
+      message: 'Email verificado exitosamente',
+      business: updatedBusiness || undefined,
+    };
+  }
+
+  async resendVerificationCode(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const business = await this.businessRepository.findOne({
+      where: { email },
+    });
+
+    if (!business) {
+      return { success: false, message: 'Negocio no encontrado' };
+    }
+
+    if (business.emailVerified) {
+      return { success: false, message: 'El email ya está verificado' };
+    }
+
+    return this.generateAndSendVerificationCode(business);
   }
 
   async createVerificationCode(
@@ -22,15 +132,8 @@ export class VerificationCodeService {
     type: VerificationCodeType,
     clientId?: number,
   ): Promise<VerificationCode> {
-    // Invalidar códigos anteriores del mismo tipo para este email
-    await this.verificationCodeRepository.update(
-      { email, type, used: false },
-      { used: true },
-    );
-
-    const code = this.generateCode();
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 15); // Expira en 15 minutos
+    const code = this.generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
 
     const verificationCode = this.verificationCodeRepository.create({
       code,
@@ -54,59 +157,31 @@ export class VerificationCodeService {
         code,
         type,
         used: false,
-        expiresAt: MoreThan(new Date()),
       },
     });
 
     if (!verificationCode) {
       return {
         valid: false,
-        message: 'Código inválido o expirado',
+        message: 'Código de verificación inválido',
+      };
+    }
+
+    if (verificationCode.expiresAt < new Date()) {
+      return {
+        valid: false,
+        message: 'El código de verificación ha expirado',
       };
     }
 
     // Marcar el código como usado
-    await this.verificationCodeRepository.update(
-      { id: verificationCode.id },
-      { used: true },
-    );
+    await this.verificationCodeRepository.update(verificationCode.id, {
+      used: true,
+    });
 
     return {
       valid: true,
-      message: 'Código validado correctamente',
+      message: 'Código verificado correctamente',
     };
-  }
-
-  async hasValidCode(
-    email: string,
-    type: VerificationCodeType,
-  ): Promise<boolean> {
-    const count = await this.verificationCodeRepository.count({
-      where: {
-        email,
-        type,
-        used: false,
-        expiresAt: MoreThan(new Date()),
-      },
-    });
-
-    return count > 0;
-  }
-
-  async getLatestCode(
-    email: string,
-    type: VerificationCodeType,
-  ): Promise<VerificationCode | null> {
-    return await this.verificationCodeRepository.findOne({
-      where: {
-        email,
-        type,
-        used: false,
-        expiresAt: MoreThan(new Date()),
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
   }
 }

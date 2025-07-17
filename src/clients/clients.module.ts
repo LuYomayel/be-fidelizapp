@@ -6,6 +6,7 @@ import { VerificationCode } from './entities/verification-code.entity';
 import { StampRedemption } from './entities/stamp-redemption.entity';
 import { Stamp } from '../business/entities/stamp.entity';
 import { RewardRedemption } from '../business/entities/reward-redemption.entity';
+import { Business } from '../business/entities/business.entity';
 import { ClientsController } from './clients.controller';
 import { ClientsService } from './clients.service';
 import { ClientCardController } from './client-card.controller';
@@ -27,6 +28,7 @@ import { VerificationCodeService } from '../common/services/verification-code.se
       StampRedemption,
       Stamp,
       RewardRedemption,
+      Business,
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'fallback-secret-key',

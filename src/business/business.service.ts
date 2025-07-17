@@ -17,6 +17,8 @@ import { ClientCard } from '../clients/entities/client-card.entity';
 import { StampRedemption } from '../clients/entities/stamp-redemption.entity';
 import { Reward } from './entities/reward.entity';
 import { RewardRedemption } from './entities/reward-redemption.entity';
+import { VerificationCodeService } from '../common/services/verification-code.service';
+import { EmployeeService } from './employee.service';
 //TODO: Importar Reward
 
 @Injectable()
@@ -38,50 +40,117 @@ export class BusinessService {
     @InjectRepository(RewardRedemption)
     private rewardRedemptionRepository: Repository<RewardRedemption>,
     private stampService: StampService,
+    private verificationCodeService: VerificationCodeService,
+    private employeeService: EmployeeService,
   ) {}
 
   async create(
     createBusinessDto: CreateBusinessDto,
     logoPath?: string,
-  ): Promise<Business> {
-    console.log('🔍 DEBUG - BusinessService.create:');
-    console.log('- logoPath recibido:', logoPath);
+  ): Promise<{ business: Business; emailSent: boolean }> {
+    try {
+      console.log('🔍 DEBUG - BusinessService.create:');
+      console.log('- logoPath recibido:', logoPath);
 
-    const existingBusiness = await this.businessRepository.findOne({
-      where: { email: createBusinessDto.email },
-    });
+      const existingBusiness = await this.businessRepository.findOne({
+        where: { email: createBusinessDto.email },
+      });
 
-    if (existingBusiness) {
-      throw new ConflictException('El email ya está registrado');
+      if (existingBusiness) {
+        throw new ConflictException('El email ya está registrado');
+      }
+
+      // Usar el email como contraseña temporal (será cambiada después de la verificación)
+      const hashedPassword = await bcrypt.hash(createBusinessDto.email, 10);
+
+      if (createBusinessDto.type !== BusinessType.OTRO) {
+        createBusinessDto.customType = undefined;
+      }
+
+      const businessData = {
+        ...createBusinessDto,
+        password: hashedPassword,
+        logoPath: logoPath || undefined,
+        emailVerified: false,
+        mustChangePassword: true,
+      };
+
+      console.log('- businessData a guardar:', {
+        ...businessData,
+        password: '[HIDDEN]',
+      });
+
+      const business = this.businessRepository.create(businessData);
+      const savedBusiness = await this.businessRepository.save(business);
+
+      console.log('- business guardado con logoPath:', savedBusiness.logoPath);
+
+      // Enviar código de verificación
+      const emailResult =
+        await this.verificationCodeService.generateAndSendVerificationCode(
+          savedBusiness,
+        );
+      console.log('emailResult at create  ', emailResult);
+      return {
+        business: savedBusiness,
+        emailSent: emailResult.success,
+      };
+    } catch (error) {
+      console.error('Error creando negocio:', error);
+      throw error;
     }
-
-    const hashedPassword = await bcrypt.hash(createBusinessDto.password, 10);
-
-    if (createBusinessDto.type !== BusinessType.OTRO) {
-      createBusinessDto.customType = undefined;
-    }
-
-    const businessData = {
-      ...createBusinessDto,
-      password: hashedPassword,
-      logoPath: logoPath || undefined,
-    };
-
-    console.log('- businessData a guardar:', {
-      ...businessData,
-      password: '[HIDDEN]',
-    });
-
-    const business = this.businessRepository.create(businessData);
-    const savedBusiness = await this.businessRepository.save(business);
-
-    console.log('- business guardado con logoPath:', savedBusiness.logoPath);
-
-    return savedBusiness;
   }
 
   async findAll(): Promise<Business[]> {
     return await this.businessRepository.find();
+  }
+
+  async verifyEmail(
+    email: string,
+    verificationCode: string,
+  ): Promise<{ success: boolean; message: string; business?: Business }> {
+    const result = await this.verificationCodeService.verifyCode(
+      email,
+      verificationCode,
+    );
+
+    if (result.success && result.business) {
+      // Crear empleado default una vez que se verifica el email
+      await this.createDefaultEmployee(result.business);
+    }
+
+    return result;
+  }
+
+  async resendVerificationCode(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    return await this.verificationCodeService.resendVerificationCode(email);
+  }
+
+  private async createDefaultEmployee(business: Business): Promise<void> {
+    try {
+      // Crear empleado default con los datos del administrador
+      const defaultEmployeeData = {
+        firstName: business.adminFirstName,
+        lastName: business.adminLastName,
+        isDefault: true,
+        business,
+      };
+
+      console.log('🔍 DEBUG - Creando empleado default:', defaultEmployeeData);
+      console.log('- Para negocio:', business.businessName);
+
+      const employee = await this.employeeService.create(
+        defaultEmployeeData,
+        business.id,
+      );
+
+      console.log('🔍 DEBUG - Empleado default creado exitosamente:', employee);
+    } catch (error) {
+      console.error('Error creando empleado default:', error);
+      // No lanzamos el error para no afectar el flujo de verificación
+    }
   }
 
   async findOne(id: number): Promise<Business> {
@@ -92,8 +161,14 @@ export class BusinessService {
     return business;
   }
 
-  async findByEmail(email: string): Promise<Business | null> {
-    return await this.businessRepository.findOne({ where: { email } });
+  async findByEmail(email: string): Promise<Business> {
+    const business = await this.businessRepository.findOne({
+      where: { email },
+    });
+    if (!business) {
+      throw new NotFoundException(`Negocio con email ${email} no encontrado`);
+    }
+    return business;
   }
 
   async getDashboard(businessId: number): Promise<IDashboard> {
@@ -392,15 +467,37 @@ export class BusinessService {
   async validateBusiness(
     email: string,
     password: string,
-  ): Promise<Business | null> {
+  ): Promise<{
+    business: Business | null;
+    needsVerification?: boolean;
+    mustChangePassword?: boolean;
+  }> {
     const business = await this.findByEmail(email);
-    if (
-      business &&
-      (await this.validatePassword(password, business.password))
-    ) {
-      return business;
+
+    if (!business) {
+      return { business: null };
     }
-    return null;
+
+    const isPasswordValid = await this.validatePassword(
+      password,
+      business.password,
+    );
+
+    if (!isPasswordValid) {
+      return { business: null };
+    }
+
+    if (!business.emailVerified) {
+      return {
+        business: null,
+        needsVerification: true,
+      };
+    }
+
+    return {
+      business,
+      mustChangePassword: business.mustChangePassword,
+    };
   }
 
   generateToken(business: Business): string {

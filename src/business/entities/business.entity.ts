@@ -21,6 +21,12 @@ export class Business implements IBusiness {
   @Column()
   password: string;
 
+  @Column({ length: 100 })
+  adminFirstName: string;
+
+  @Column({ length: 100 })
+  adminLastName: string;
+
   @Column({ length: 20, nullable: true })
   internalPhone: string;
 
@@ -71,6 +77,18 @@ export class Business implements IBusiness {
 
   @Column({ length: 255, nullable: true })
   rewardDescription?: string; // Descripción de la recompensa (ej: "Café gratis")
+
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  @Column({ nullable: true, length: 6 })
+  emailVerificationCode?: string;
+
+  @Column({ nullable: true })
+  emailVerificationCodeExpiry?: Date;
+
+  @Column({ default: true })
+  mustChangePassword: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

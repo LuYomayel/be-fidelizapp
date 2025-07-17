@@ -19,7 +19,8 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PublicAwareJwtAuthGuard } from '../auth/public-aware-jwt-auth.guard';
+import { Public } from '../auth/public.decorator';
 import { ProfileService } from './profile.service';
 import {
   IBusinessProfile,
@@ -29,16 +30,22 @@ import {
   IBusinessSettings,
   BusinessRequest,
   ApiResponse as ApiResponseType,
+  IBusiness,
+  UpdateBusinessDto,
 } from '@shared';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { handleMulterError } from '../common/middleware/multer-error.middleware';
+import { BusinessService } from './business.service';
 
 @ApiTags('Business Profile')
 @Controller('business/profile')
-@UseGuards(JwtAuthGuard)
+@UseGuards(PublicAwareJwtAuthGuard)
 export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
+  constructor(
+    private readonly profileService: ProfileService,
+    private readonly businessService: BusinessService,
+  ) {}
 
   @Get('complete')
   @ApiOperation({ summary: 'Obtener perfil del negocio' })
@@ -159,6 +166,56 @@ export class ProfileController {
       };
     } catch (error) {
       handleMulterError(error);
+    }
+  }
+
+  @Post('first-time-change-password')
+  @Public()
+  @ApiOperation({ summary: 'Cambiar contraseña del negocio por primera vez' })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña cambiada exitosamente',
+  })
+  // NOTA: Este endpoint NO requiere autenticación gracias al decorador @Public()
+  async firstTimeChangePassword(
+    @Body() changePasswordDto: IChangePasswordDto,
+  ): Promise<
+    ApiResponseType<{
+      business: IBusiness;
+      tokens: { accessToken: string; refreshToken: string };
+    }>
+  > {
+    try {
+      await this.profileService.changeBusinessPassword(-1, changePasswordDto);
+      const business = await this.businessService.findByEmail(
+        changePasswordDto.currentPassword,
+      );
+      await this.businessService.update(business.id, {
+        mustChangePassword: false,
+      } as UpdateBusinessDto);
+      const token = this.businessService.generateToken(business);
+      return {
+        success: true,
+        data: {
+          business,
+          tokens: {
+            accessToken: token,
+            refreshToken: token,
+          },
+        },
+        message: 'Contraseña cambiada exitosamente',
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error desconocido';
+      throw new HttpException(
+        {
+          success: false,
+          message: errorMessage || 'Error al cambiar la contraseña',
+          error: errorMessage,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 

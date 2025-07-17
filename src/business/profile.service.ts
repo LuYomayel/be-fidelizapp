@@ -54,6 +54,10 @@ export class ProfileService {
       website: business.website,
       stampsForReward: business.stampsForReward,
       rewardDescription: business.rewardDescription,
+      adminFirstName: business.adminFirstName,
+      adminLastName: business.adminLastName,
+      emailVerified: business.emailVerified,
+      mustChangePassword: business.mustChangePassword,
       createdAt: business.createdAt,
       updatedAt: business.updatedAt,
     };
@@ -140,9 +144,17 @@ export class ProfileService {
         throw new BadRequestException('Las contraseñas no coinciden');
       }
 
-      const business = await this.businessRepository.findOne({
-        where: { id: businessId },
-      });
+      // Buscar por id O por email
+      let business: Business | null;
+      if (businessId && businessId === -1) {
+        business = await this.businessRepository.findOne({
+          where: { email: currentPassword },
+        });
+      } else {
+        business = await this.businessRepository.findOne({
+          where: { id: businessId },
+        });
+      }
 
       if (!business) {
         throw new NotFoundException('Negocio no encontrado');

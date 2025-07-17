@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import { AuthModule } from '../auth/auth.module';
 import { BusinessService } from './business.service';
 import { BusinessController } from './business.controller';
 import { StampService } from './stamp.service';
@@ -22,10 +23,13 @@ import { Employee } from './entities/employee.entity';
 import { ClientCard } from '../clients/entities/client-card.entity';
 import { Client } from '../clients/entities/client.entity';
 import { StampRedemption } from '../clients/entities/stamp-redemption.entity';
+import { VerificationCode } from '../clients/entities/verification-code.entity';
 
 import { ProfileController } from './profile.controller';
 import { ProfileService } from './profile.service';
 import { MulterModule } from '@nestjs/platform-express';
+import { EmailService } from '../common/services/email.service';
+import { VerificationCodeService } from '../common/services/verification-code.service';
 
 @Module({
   imports: [
@@ -40,6 +44,7 @@ import { MulterModule } from '@nestjs/platform-express';
       ClientCard,
       Client,
       StampRedemption,
+      VerificationCode,
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'fallback-secret-key',
@@ -56,6 +61,8 @@ import { MulterModule } from '@nestjs/platform-express';
     StampConfigService,
     EmployeeService,
     ProfileService,
+    EmailService,
+    VerificationCodeService,
   ],
   controllers: [
     BusinessController,

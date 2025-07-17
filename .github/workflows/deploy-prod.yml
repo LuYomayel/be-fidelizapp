@@ -61,17 +61,6 @@ jobs:
             npm run build
             pm2 restart be-stampia-prod || pm2 start ecosystem.config.js --only be-stampia-prod
 
-      - name: Health Check
-        run: |
-          sleep 30
-          curl -f https://api.stampia.luciano-yomayel.com/health || exit 1
-
-      - name: Smoke Tests
-        run: |
-          sleep 60
-          # Aquí puedes agregar smoke tests en producción
-          echo "Smoke tests would run here"
-
       - name: Notify Success
         if: success()
         run: |

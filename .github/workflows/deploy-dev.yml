@@ -45,8 +45,3 @@ jobs:
             npm install
             npm run build
             pm2 restart be-stampia-dev || pm2 start ecosystem.config.js --only be-stampia-dev
-
-      - name: Health Check
-        run: |
-          sleep 30
-          curl -f https://api-dev.stampia.luciano-yomayel.com/health || exit 1

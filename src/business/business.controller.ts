@@ -165,31 +165,29 @@ export class BusinessController {
       const logoPath = logo ? logo?.path : undefined;
       console.log('- logoPath final:', logoPath);
 
-      const business = await this.businessService.create(
+      const result = await this.businessService.create(
         createBusinessDto,
         logoPath,
       );
-
-      // Generar token JWT automáticamente después del registro
-      const token = this.businessService.generateToken(business);
 
       return {
         success: true,
         data: {
           business: {
-            id: business.id,
-            email: business.email,
-            businessName: business.businessName,
-            type: business.type,
-            customType: business.customType,
-            logoPath: business.logoPath,
+            id: result.business.id,
+            email: result.business.email,
+            businessName: result.business.businessName,
+            adminFirstName: result.business.adminFirstName,
+            adminLastName: result.business.adminLastName,
+            type: result.business.type,
+            customType: result.business.customType,
+            logoPath: result.business.logoPath,
+            emailVerified: result.business.emailVerified,
           },
-          tokens: {
-            accessToken: token,
-            refreshToken: token, // Por ahora usar el mismo token
-          },
+          emailSent: result.emailSent,
         },
-        message: 'Negocio registrado exitosamente',
+        message:
+          'Negocio registrado exitosamente. Por favor verifica tu email.',
       };
     } catch (error) {
       console.log(error);
@@ -234,12 +232,22 @@ export class BusinessController {
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() loginBusinessDto: LoginBusinessDto) {
     try {
-      const business = await this.businessService.validateBusiness(
+      const result = await this.businessService.validateBusiness(
         loginBusinessDto.email,
         loginBusinessDto.password,
       );
 
-      if (!business) {
+      if (!result.business) {
+        if (result.needsVerification) {
+          return {
+            success: false,
+            data: null,
+            message:
+              'Tu cuenta no está verificada. Por favor verifica tu email.',
+            needsVerification: true,
+          };
+        }
+
         return {
           success: false,
           data: null,
@@ -248,15 +256,19 @@ export class BusinessController {
       }
 
       // Generar token JWT
-      const token = this.businessService.generateToken(business);
+      const token = this.businessService.generateToken(result.business);
 
       return {
         success: true,
         data: {
           business: {
-            id: business.id,
-            email: business.email,
-            businessName: business.businessName,
+            id: result.business.id,
+            email: result.business.email,
+            businessName: result.business.businessName,
+            adminFirstName: result.business.adminFirstName,
+            adminLastName: result.business.adminLastName,
+            emailVerified: result.business.emailVerified,
+            mustChangePassword: result.business.mustChangePassword,
           },
           token,
           tokens: {
@@ -265,6 +277,7 @@ export class BusinessController {
           },
         },
         message: 'Login exitoso',
+        mustChangePassword: result.mustChangePassword,
       };
     } catch (error) {
       console.log(error);
@@ -272,6 +285,115 @@ export class BusinessController {
         success: false,
         data: null,
         message: 'Error al iniciar sesión',
+      };
+    }
+  }
+
+  @Post('verify-email')
+  @ApiOperation({
+    summary: 'Verificar email con código',
+    description:
+      'Verifica el email del negocio usando el código enviado por email',
+  })
+  @ApiBody({
+    description: 'Datos de verificación',
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+        verificationCode: { type: 'string', minLength: 6, maxLength: 6 },
+      },
+      required: ['email', 'verificationCode'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verificado exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        redirectTo: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Código inválido o expirado' })
+  async verifyEmail(
+    @Body() verifyEmailDto: { email: string; verificationCode: string },
+  ) {
+    try {
+      const result = await this.businessService.verifyEmail(
+        verifyEmailDto.email,
+        verifyEmailDto.verificationCode,
+      );
+
+      if (result.success) {
+        return {
+          success: true,
+          message: result.message,
+          redirectTo: '/admin/login',
+        };
+      }
+
+      return {
+        success: false,
+        message: result.message,
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        message: 'Error al verificar email',
+      };
+    }
+  }
+
+  @Post('resend-verification')
+  @ApiOperation({
+    summary: 'Reenviar código de verificación',
+    description: 'Reenvía el código de verificación al email del negocio',
+  })
+  @ApiBody({
+    description: 'Email del negocio',
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+      },
+      required: ['email'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Código reenviado exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email no encontrado o ya verificado',
+  })
+  async resendVerificationCode(@Body() resendDto: { email: string }) {
+    try {
+      const result = await this.businessService.resendVerificationCode(
+        resendDto.email,
+      );
+
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error) {
+      console.log(error);
+      return {
+        success: false,
+        message: 'Error al reenviar código',
       };
     }
   }

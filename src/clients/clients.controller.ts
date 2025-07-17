@@ -77,10 +77,34 @@ export class ClientsController {
         verifyEmailDto.email,
         verifyEmailDto.code,
       );
+
+      if (result.success && result.client) {
+        // Generar tokens de autenticación para el cliente
+        const clientUser = {
+          userId: result.client.id,
+          username:
+            `${result.client.firstName || ''} ${result.client.lastName || ''}`.trim(),
+          email: result.client.email,
+          emailVerified: result.client.emailVerified,
+          provider: result.client.provider as 'email' | 'google',
+        };
+
+        const authResult = this.authService.loginClient(clientUser);
+
+        return {
+          success: true,
+          data: {
+            client: authResult.user,
+            token: authResult.access_token,
+          },
+          message: 'Email verificado exitosamente',
+        };
+      }
+
       return {
-        success: true,
-        data: result,
-        message: 'Email verificado exitosamente',
+        success: result.success,
+        data: null,
+        message: result.message,
       };
     } catch (error: any) {
       const errorMessage =
@@ -220,7 +244,6 @@ export class ClientsController {
       }
 
       // Verificar si el email está verificado
-      /* Por el momento no se verifica el email
       if (!client.emailVerified) {
         return {
           success: false,
@@ -230,7 +253,6 @@ export class ClientsController {
           email: client.email,
         };
       }
-      */
 
       // Usar el método loginClient del AuthService
       const clientUser = {

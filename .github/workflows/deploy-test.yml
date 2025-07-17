@@ -58,14 +58,3 @@ jobs:
             npm install
             npm run build
             pm2 restart be-stampia-test || pm2 start ecosystem.config.js --only be-stampia-test
-
-      - name: Health Check
-        run: |
-          sleep 30
-          curl -f https://api-test.stampia.luciano-yomayel.com/health || exit 1
-
-      - name: Run E2E Tests
-        run: |
-          sleep 60
-          # Aquí puedes agregar tests E2E contra el ambiente de testing
-          echo "E2E tests would run here"

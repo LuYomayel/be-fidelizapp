@@ -26,7 +26,9 @@ export class CreateStampDto implements ICreateStampDto {
     enum: StampType,
     example: StampType.PURCHASE,
   })
-  @IsEnum(StampType)
+  @IsEnum(StampType, {
+    message: 'El tipo de sello debe ser uno de los valores permitidos',
+  })
   stampType: StampType;
 
   @ApiPropertyOptional({
@@ -35,7 +37,9 @@ export class CreateStampDto implements ICreateStampDto {
     example: PurchaseType.MEDIUM,
   })
   @IsOptional()
-  @IsEnum(PurchaseType)
+  @IsEnum(PurchaseType, {
+    message: 'El tipo de compra debe ser uno de los valores permitidos',
+  })
   purchaseType?: PurchaseType;
 
   @ApiProperty({
@@ -44,9 +48,9 @@ export class CreateStampDto implements ICreateStampDto {
     minimum: 1,
     maximum: 10,
   })
-  @IsNumber()
-  @Min(1)
-  @Max(10)
+  @IsNumber({}, { message: 'El valor del sello debe ser un número' })
+  @Min(1, { message: 'El valor del sello debe ser mínimo 1' })
+  @Max(10, { message: 'El valor del sello no puede ser mayor a 10' })
   stampValue: number;
 
   @ApiProperty({
@@ -54,9 +58,11 @@ export class CreateStampDto implements ICreateStampDto {
     example: 'Compra de café grande',
     maxLength: 500,
   })
-  @IsNotEmpty()
-  @IsString()
-  @Length(1, 500)
+  @IsNotEmpty({ message: 'La descripción es obligatoria' })
+  @IsString({ message: 'La descripción debe ser una cadena de texto' })
+  @Length(1, 500, {
+    message: 'La descripción debe tener entre 1 y 500 caracteres',
+  })
   description: string;
 
   @ApiPropertyOptional({
@@ -64,7 +70,10 @@ export class CreateStampDto implements ICreateStampDto {
     example: '2024-12-31T23:59:59.000Z',
   })
   @IsOptional()
-  @IsDateString()
+  @IsDateString(
+    {},
+    { message: 'La fecha de expiración debe ser una fecha válida' },
+  )
   expiresAt?: Date;
 }
 
@@ -75,9 +84,11 @@ export class RedeemStampDto implements IRedeemStampDto {
     minLength: 6,
     maxLength: 6,
   })
-  @IsNotEmpty()
-  @IsString()
-  @Length(6, 6)
+  @IsNotEmpty({ message: 'El código del sello es obligatorio' })
+  @IsString({ message: 'El código del sello debe ser una cadena de texto' })
+  @Length(6, 6, {
+    message: 'El código del sello debe tener exactamente 6 caracteres',
+  })
   code: string;
 }
 
@@ -87,8 +98,8 @@ export class QuickStampDto {
     example: 150,
     minimum: 1,
   })
-  @IsNumber()
-  @Min(1)
+  @IsNumber({}, { message: 'El valor de la venta debe ser un número' })
+  @Min(1, { message: 'El valor de la venta debe ser mínimo 1 peso' })
   saleValue: number;
 
   @ApiPropertyOptional({
@@ -97,8 +108,10 @@ export class QuickStampDto {
     maxLength: 500,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 500)
+  @IsString({ message: 'La descripción debe ser una cadena de texto' })
+  @Length(1, 500, {
+    message: 'La descripción debe tener entre 1 y 500 caracteres',
+  })
   description?: string;
 }
 
@@ -216,7 +229,9 @@ export class RedemptionFiltersDto {
     enum: RedemptionStatus,
   })
   @IsOptional()
-  @IsEnum(RedemptionStatus)
+  @IsEnum(RedemptionStatus, {
+    message: 'El estado de la redención debe ser uno de los valores permitidos',
+  })
   status?: RedemptionStatus;
 
   @ApiPropertyOptional({
@@ -225,7 +240,7 @@ export class RedemptionFiltersDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? new Date(value) : undefined))
-  @IsDate()
+  @IsDate({ message: 'La fecha de inicio debe ser una fecha válida' })
   dateFrom?: Date;
 
   @ApiPropertyOptional({
@@ -234,7 +249,7 @@ export class RedemptionFiltersDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? new Date(value) : undefined))
-  @IsDate()
+  @IsDate({ message: 'La fecha de fin debe ser una fecha válida' })
   dateTo?: Date;
 
   @ApiPropertyOptional({
@@ -243,7 +258,7 @@ export class RedemptionFiltersDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
-  @IsNumber()
+  @IsNumber({}, { message: 'El ID del cliente debe ser un número' })
   clientId?: number;
 
   @ApiPropertyOptional({
@@ -252,7 +267,7 @@ export class RedemptionFiltersDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
-  @IsNumber()
+  @IsNumber({}, { message: 'El ID de la recompensa debe ser un número' })
   rewardId?: number;
 
   @ApiPropertyOptional({
@@ -262,8 +277,8 @@ export class RedemptionFiltersDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
-  @IsNumber()
-  @Min(1)
+  @IsNumber({}, { message: 'El número de página debe ser un número' })
+  @Min(1, { message: 'El número de página debe ser mínimo 1' })
   page?: number;
 
   @ApiPropertyOptional({
@@ -274,8 +289,8 @@ export class RedemptionFiltersDto {
   })
   @IsOptional()
   @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
-  @IsNumber()
-  @Min(1)
-  @Max(100)
+  @IsNumber({}, { message: 'El límite de elementos debe ser un número' })
+  @Min(1, { message: 'El límite de elementos debe ser mínimo 1' })
+  @Max(100, { message: 'El límite de elementos no puede ser mayor a 100' })
   limit?: number;
 }

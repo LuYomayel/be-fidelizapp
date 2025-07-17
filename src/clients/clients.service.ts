@@ -97,7 +97,7 @@ export class ClientsService {
   async verifyEmail(
     email: string,
     code: string,
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{ success: boolean; message: string; client?: any }> {
     const validation = await this.verificationCodeService.validateCode(
       email,
       code,
@@ -114,9 +114,22 @@ export class ClientsService {
     // Marcar el email como verificado
     await this.clientRepository.update({ email }, { emailVerified: true });
 
+    // Obtener el cliente actualizado
+    const client = await this.findByEmail(email);
+
     return {
       success: true,
       message: 'Email verificado correctamente',
+      client: client
+        ? {
+            id: client.id,
+            email: client.email,
+            firstName: client.firstName,
+            lastName: client.lastName,
+            emailVerified: client.emailVerified,
+            provider: client.provider,
+          }
+        : undefined,
     };
   }
 

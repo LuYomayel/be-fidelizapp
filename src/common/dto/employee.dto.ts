@@ -15,9 +15,11 @@ export class CreateEmployeeDto implements ICreateEmployeeDto {
     example: 'Juan',
     maxLength: 100,
   })
-  @IsNotEmpty()
-  @IsString()
-  @Length(1, 100)
+  @IsNotEmpty({ message: 'El nombre del empleado es obligatorio' })
+  @IsString({ message: 'El nombre del empleado debe ser una cadena de texto' })
+  @Length(1, 100, {
+    message: 'El nombre del empleado debe tener entre 1 y 100 caracteres',
+  })
   firstName: string;
 
   @ApiProperty({
@@ -25,9 +27,13 @@ export class CreateEmployeeDto implements ICreateEmployeeDto {
     example: 'Pérez',
     maxLength: 100,
   })
-  @IsNotEmpty()
-  @IsString()
-  @Length(1, 100)
+  @IsNotEmpty({ message: 'El apellido del empleado es obligatorio' })
+  @IsString({
+    message: 'El apellido del empleado debe ser una cadena de texto',
+  })
+  @Length(1, 100, {
+    message: 'El apellido del empleado debe tener entre 1 y 100 caracteres',
+  })
   lastName: string;
 
   @ApiPropertyOptional({
@@ -36,7 +42,9 @@ export class CreateEmployeeDto implements ICreateEmployeeDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({
+    message: 'El campo "es empleado por defecto" debe ser verdadero o falso',
+  })
   isDefault?: boolean;
 }
 
@@ -50,8 +58,10 @@ export class UpdateEmployeeDto
     maxLength: 100,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 100)
+  @IsString({ message: 'El nombre del empleado debe ser una cadena de texto' })
+  @Length(1, 100, {
+    message: 'El nombre del empleado debe tener entre 1 y 100 caracteres',
+  })
   firstName?: string;
 
   @ApiPropertyOptional({
@@ -60,8 +70,12 @@ export class UpdateEmployeeDto
     maxLength: 100,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 100)
+  @IsString({
+    message: 'El apellido del empleado debe ser una cadena de texto',
+  })
+  @Length(1, 100, {
+    message: 'El apellido del empleado debe tener entre 1 y 100 caracteres',
+  })
   lastName?: string;
 
   @ApiPropertyOptional({
@@ -69,6 +83,8 @@ export class UpdateEmployeeDto
     example: false,
   })
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({
+    message: 'El campo "es empleado por defecto" debe ser verdadero o falso',
+  })
   isDefault?: boolean;
 }

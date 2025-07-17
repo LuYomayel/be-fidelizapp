@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
@@ -9,6 +10,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LocalStrategy, LocalClientStrategy } from './local.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { GoogleStrategy } from './google.strategy';
+import { PublicAwareJwtAuthGuard } from './public-aware-jwt-auth.guard';
 
 @Module({
   imports: [
@@ -31,8 +33,10 @@ import { GoogleStrategy } from './google.strategy';
     LocalClientStrategy,
     JwtStrategy,
     GoogleStrategy,
+    PublicAwareJwtAuthGuard,
+    Reflector,
   ],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, PublicAwareJwtAuthGuard],
 })
 export class AuthModule {}

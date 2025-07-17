@@ -22,9 +22,11 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     example: 'Panadería La Delicia',
     maxLength: 255,
   })
-  @IsNotEmpty()
-  @IsString()
-  @Length(1, 255)
+  @IsNotEmpty({ message: 'El nombre del negocio es obligatorio' })
+  @IsString({ message: 'El nombre del negocio debe ser una cadena de texto' })
+  @Length(1, 255, {
+    message: 'El nombre del negocio debe tener entre 1 y 255 caracteres',
+  })
   businessName: string;
 
   @ApiProperty({
@@ -32,7 +34,7 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     example: 'contacto@ladelicia.com',
     format: 'email',
   })
-  @IsEmail()
+  @IsEmail({}, { message: 'Por favor ingrese un email válido' })
   email: string;
 
   @ApiProperty({
@@ -41,10 +43,41 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     minLength: 6,
     maxLength: 100,
   })
-  @IsNotEmpty()
-  @IsString()
-  @Length(6, 100)
+  @IsNotEmpty({ message: 'La contraseña es obligatoria' })
+  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
+  @Length(6, 100, {
+    message: 'La contraseña debe tener entre 6 y 100 caracteres',
+  })
   password: string;
+
+  @ApiProperty({
+    description: 'Nombre del administrador del negocio',
+    example: 'Juan',
+    maxLength: 100,
+  })
+  @IsNotEmpty({ message: 'El nombre del administrador es obligatorio' })
+  @IsString({
+    message: 'El nombre del administrador debe ser una cadena de texto',
+  })
+  @Length(1, 100, {
+    message: 'El nombre del administrador debe tener entre 1 y 100 caracteres',
+  })
+  adminFirstName: string;
+
+  @ApiProperty({
+    description: 'Apellido del administrador del negocio',
+    example: 'Pérez',
+    maxLength: 100,
+  })
+  @IsNotEmpty({ message: 'El apellido del administrador es obligatorio' })
+  @IsString({
+    message: 'El apellido del administrador debe ser una cadena de texto',
+  })
+  @Length(1, 100, {
+    message:
+      'El apellido del administrador debe tener entre 1 y 100 caracteres',
+  })
+  adminLastName: string;
 
   @ApiPropertyOptional({
     description: 'Teléfono interno del negocio',
@@ -52,8 +85,10 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 20,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 20)
+  @IsString({ message: 'El teléfono interno debe ser una cadena de texto' })
+  @Length(1, 20, {
+    message: 'El teléfono interno debe tener entre 1 y 20 caracteres',
+  })
   internalPhone?: string;
 
   @ApiPropertyOptional({
@@ -62,8 +97,10 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 20,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 20)
+  @IsString({ message: 'El teléfono externo debe ser una cadena de texto' })
+  @Length(1, 20, {
+    message: 'El teléfono externo debe tener entre 1 y 20 caracteres',
+  })
   externalPhone?: string;
 
   @ApiProperty({
@@ -71,7 +108,9 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     enum: BusinessSize,
     example: BusinessSize.SMALL,
   })
-  @IsEnum(BusinessSize)
+  @IsEnum(BusinessSize, {
+    message: 'El tamaño del negocio debe ser uno de los valores permitidos',
+  })
   size: BusinessSize;
 
   @ApiPropertyOptional({
@@ -80,8 +119,10 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 255,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
+  @IsString({ message: 'La dirección debe ser una cadena de texto' })
+  @Length(1, 255, {
+    message: 'La dirección debe tener entre 1 y 255 caracteres',
+  })
   street?: string;
 
   @ApiPropertyOptional({
@@ -90,8 +131,8 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 100,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 100)
+  @IsString({ message: 'El barrio debe ser una cadena de texto' })
+  @Length(1, 100, { message: 'El barrio debe tener entre 1 y 100 caracteres' })
   neighborhood?: string;
 
   @ApiPropertyOptional({
@@ -100,8 +141,10 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 10,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 10)
+  @IsString({ message: 'El código postal debe ser una cadena de texto' })
+  @Length(1, 10, {
+    message: 'El código postal debe tener entre 1 y 10 caracteres',
+  })
   postalCode?: string;
 
   @ApiPropertyOptional({
@@ -110,8 +153,10 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 100,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 100)
+  @IsString({ message: 'La provincia debe ser una cadena de texto' })
+  @Length(1, 100, {
+    message: 'La provincia debe tener entre 1 y 100 caracteres',
+  })
   province?: string;
 
   @ApiProperty({
@@ -119,7 +164,9 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     enum: BusinessType,
     example: BusinessType.CAFETERIA,
   })
-  @IsEnum(BusinessType)
+  @IsEnum(BusinessType, {
+    message: 'El tipo de negocio debe ser uno de los valores permitidos',
+  })
   type: BusinessType;
 
   @ApiPropertyOptional({
@@ -128,8 +175,10 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 255,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
+  @IsString({ message: 'El tipo personalizado debe ser una cadena de texto' })
+  @Length(1, 255, {
+    message: 'El tipo personalizado debe tener entre 1 y 255 caracteres',
+  })
   customType?: string;
 
   @ApiPropertyOptional({
@@ -138,8 +187,10 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 255,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
+  @IsString({ message: 'El Instagram debe ser una cadena de texto' })
+  @Length(1, 255, {
+    message: 'El Instagram debe tener entre 1 y 255 caracteres',
+  })
   instagram?: string;
 
   @ApiPropertyOptional({
@@ -148,8 +199,8 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 255,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
+  @IsString({ message: 'El TikTok debe ser una cadena de texto' })
+  @Length(1, 255, { message: 'El TikTok debe tener entre 1 y 255 caracteres' })
   tiktok?: string;
 
   @ApiPropertyOptional({
@@ -158,8 +209,8 @@ export class CreateBusinessDto implements ICreateBusinessDto {
     maxLength: 255,
   })
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
+  @IsString({ message: 'El website debe ser una cadena de texto' })
+  @Length(1, 255, { message: 'El website debe tener entre 1 y 255 caracteres' })
   website?: string;
 
   @ApiPropertyOptional({
@@ -181,9 +232,40 @@ export class UpdateBusinessDto
     maxLength: 100,
   })
   @IsOptional()
-  @IsString()
-  @Length(6, 100)
+  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
+  @Length(6, 100, {
+    message: 'La contraseña debe tener entre 6 y 100 caracteres',
+  })
   password?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nombre del administrador del negocio',
+    example: 'Juan',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString({
+    message: 'El nombre del administrador debe ser una cadena de texto',
+  })
+  @Length(1, 100, {
+    message: 'El nombre del administrador debe tener entre 1 y 100 caracteres',
+  })
+  adminFirstName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Apellido del administrador del negocio',
+    example: 'Pérez',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString({
+    message: 'El apellido del administrador debe ser una cadena de texto',
+  })
+  @Length(1, 100, {
+    message:
+      'El apellido del administrador debe tener entre 1 y 100 caracteres',
+  })
+  adminLastName?: string;
 }
 
 export class LoginBusinessDto implements ILoginBusinessDto {
@@ -192,14 +274,49 @@ export class LoginBusinessDto implements ILoginBusinessDto {
     example: 'contacto@ladelicia.com',
     format: 'email',
   })
-  @IsEmail()
+  @IsEmail({}, { message: 'Por favor ingrese un email válido' })
   email: string;
 
   @ApiProperty({
     description: 'Contraseña del negocio',
     example: 'superSecreta123',
   })
-  @IsNotEmpty()
-  @IsString()
+  @IsNotEmpty({ message: 'La contraseña es obligatoria' })
+  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
   password: string;
+}
+
+export class VerifyEmailDto {
+  @ApiProperty({
+    description: 'Email del negocio',
+    example: 'contacto@ladelicia.com',
+    format: 'email',
+  })
+  @IsEmail({}, { message: 'Por favor ingrese un email válido' })
+  email: string;
+
+  @ApiProperty({
+    description: 'Código de verificación',
+    example: '123456',
+    minLength: 6,
+    maxLength: 6,
+  })
+  @IsNotEmpty({ message: 'El código de verificación es obligatorio' })
+  @IsString({
+    message: 'El código de verificación debe ser una cadena de texto',
+  })
+  @Length(6, 6, {
+    message: 'El código de verificación debe tener exactamente 6 caracteres',
+  })
+  verificationCode: string;
+}
+
+export class ResendVerificationCodeDto {
+  @ApiProperty({
+    description: 'Email del negocio',
+    example: 'contacto@ladelicia.com',
+    format: 'email',
+  })
+  @IsEmail({}, { message: 'Por favor ingrese un email válido' })
+  email: string;
 }

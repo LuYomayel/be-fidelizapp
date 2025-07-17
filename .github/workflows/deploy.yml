@@ -41,7 +41,7 @@ jobs:
             echo "🚀 Iniciando despliegue en producción..."
 
             # Navegar al directorio del proyecto
-            cd ${{ secrets.PROD_PROJECT_PATH || '/home/be-fidelizapp' }}
+            cd ${{ secrets.PROD_PROJECT_PATH || '/home/be-stampia' }}
 
             echo "📥 Descargando últimos cambios..."
             git pull origin main
