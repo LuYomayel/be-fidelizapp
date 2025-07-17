@@ -70,10 +70,17 @@ export class BusinessService {
         createBusinessDto.customType = undefined;
       }
 
+      let logoPathToSave = logoPath;
+      if (logoPath) {
+        logoPathToSave = logoPath.replace(/^uploads\//, '');
+      } else {
+        logoPathToSave = undefined;
+      }
+
       const businessData = {
         ...createBusinessDto,
         password: hashedPassword,
-        logoPath: logoPath || undefined,
+        logoPath: logoPathToSave,
         emailVerified: false,
         mustChangePassword: true,
       };
