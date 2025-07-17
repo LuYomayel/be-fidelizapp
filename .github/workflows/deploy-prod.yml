@@ -57,6 +57,10 @@ jobs:
           script: |
             cd /home/be-stampia-prod
             git pull origin main
+            git submodule update --init --recursive
+            cd shared
+            git pull origin main
+            cd ..
             npm install
             npm run build
             pm2 restart be-stampia-prod || pm2 start ecosystem.config.js --only be-stampia-prod
