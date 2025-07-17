@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { Client } from './entities/client.entity';
 import { ClientCard } from './entities/client-card.entity';
 import { VerificationCode } from './entities/verification-code.entity';
@@ -21,6 +22,7 @@ import { VerificationCodeService } from '../common/services/verification-code.se
 
 @Module({
   imports: [
+    ConfigModule,
     TypeOrmModule.forFeature([
       Client,
       ClientCard,

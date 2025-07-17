@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
 import { BusinessService } from './business.service';
 import { BusinessController } from './business.controller';
@@ -33,6 +34,7 @@ import { VerificationCodeService } from '../common/services/verification-code.se
 
 @Module({
   imports: [
+    ConfigModule,
     TypeOrmModule.forFeature([
       Business,
       Stamp,

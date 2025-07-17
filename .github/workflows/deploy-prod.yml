@@ -65,4 +65,4 @@ jobs:
         if: success()
         run: |
           echo "🚀 Deployment to production successful!"
-          echo "Backend: https://api.stampia.luciano-yomayel.com"
+          echo "Backend: https://api.stampia.app"

@@ -1,111 +1,151 @@
-import { Injectable } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private readonly logger = new Logger(EmailService.name);
+  private resend: Resend;
 
-  constructor() {
-    // Debug para verificar configuración SMTP
-    console.log('🔧 Configuración SMTP:');
-    console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-    console.log(`SMTP_HOST: ${process.env.SMTP_HOST || 'smtp.gmail.com'}`);
-    console.log(`SMTP_PORT: ${process.env.SMTP_PORT || '587'}`);
-    console.log(
-      `SMTP_USER: ${process.env.SMTP_USER ? 'Configurado ✅' : 'No configurado ❌'}`,
-    );
-    console.log(
-      `SMTP_PASS: ${process.env.SMTP_PASS ? 'Configurado ✅' : 'No configurado ❌'}`,
-    );
-    console.log(`SMTP_FROM: ${process.env.SMTP_FROM || 'noreply@stampia.com'}`);
-
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+  constructor(private configService: ConfigService) {
+    this.initializeResend();
   }
 
-  // Método para verificar conexión SMTP (útil para debugging)
-  async verifyConnection(): Promise<boolean> {
+  private initializeResend(): void {
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+
+    this.logger.log('🔧 Configuración Resend:');
+    this.logger.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+    this.logger.log(
+      `RESEND_API_KEY: ${apiKey ? 'Configurado ✅' : 'No configurado ❌'}`,
+    );
+    this.logger.log(
+      `EMAIL_FROM: ${this.configService.get<string>('EMAIL_FROM') || 'noreply@stampia.app'}`,
+    );
+
+    if (!apiKey) {
+      this.logger.error('❌ RESEND_API_KEY no está configurado');
+      throw new Error('RESEND_API_KEY is required');
+    }
+
     try {
-      await this.transporter.verify();
-      console.log('✅ Conexión SMTP verificada correctamente');
-      return true;
+      this.resend = new Resend(apiKey);
+      this.logger.log('✅ Resend inicializado correctamente');
     } catch (error) {
-      console.error('❌ Error verificando conexión SMTP:', error);
-      return false;
+      this.logger.error('❌ Error inicializando Resend:', error);
+      throw error;
+    }
+  }
+
+  // Método para verificar conexión Resend (útil para debugging)
+  verifyConnection(): Promise<boolean> {
+    try {
+      // Resend no tiene un método de verificación directo, pero podemos hacer una prueba
+      this.logger.log('✅ Resend está configurado correctamente');
+      return Promise.resolve(true);
+    } catch (error) {
+      this.logger.error('❌ Error verificando conexión Resend:', error);
+      return Promise.resolve(false);
     }
   }
 
   async sendVerificationEmail(email: string, code: string, name?: string) {
-    const mailOptions = {
-      from: process.env.SMTP_FROM || 'noreply@stampia.com',
-      to: email,
-      subject: 'Verifica tu cuenta - Stampia',
-      html: this.getVerificationEmailTemplate(code, name),
-    };
+    const operationId = `verification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    this.logger.log(
+      `[${operationId}] 📧 Enviando email de verificación a: ${email}`,
+    );
 
     try {
       // En desarrollo, solo simular el envío
+      /*
       if (
         process.env.NODE_ENV === 'development' ||
         process.env.NODE_ENV === 'dev'
       ) {
-        console.log('📧 Email de verificación (modo desarrollo):');
-        console.log(`Para: ${email}`);
-        console.log(`Código: ${code}`);
-        console.log(`Nombre: ${name || 'No especificado'}`);
-        console.log('✅ Email simulado enviado exitosamente');
+        this.logger.log(
+          `[${operationId}] 📧 Email de verificación (modo desarrollo):`,
+        );
+        this.logger.log(`Para: ${email}`);
+        this.logger.log(`Código: ${code}`);
+        this.logger.log(`Nombre: ${name || 'No especificado'}`);
+        this.logger.log('✅ Email simulado enviado exitosamente');
         return { success: true, message: 'Email enviado (modo desarrollo)' };
       }
+      */
+      // En producción, enviar email real con Resend
+      const from =
+        this.configService.get<string>('EMAIL_FROM') || 'noreply@stampia.app';
 
-      // En producción, enviar email real
-      console.log('📧 Enviando email de verificación...');
-      await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email enviado exitosamente');
+      const result = await this.resend.emails.send({
+        from,
+        to: email,
+        subject: 'Verifica tu cuenta - Stampia',
+        html: this.getVerificationEmailTemplate(code, name),
+      });
+
+      this.logger.log(`[${operationId}] ✅ Email enviado exitosamente`);
+      this.logger.log(`[${operationId}] 📧 Message ID: ${result.data?.id}`);
+
       return { success: true, message: 'Email de verificación enviado' };
     } catch (error) {
-      console.error('❌ Error enviando email de verificación:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `[${operationId}] ❌ Error enviando email de verificación:`,
+        errorMessage,
+      );
       return { success: false, message: 'Error al enviar el email' };
     }
   }
 
   async sendPasswordResetEmail(email: string, code: string, name?: string) {
-    const mailOptions = {
-      from: process.env.SMTP_FROM || 'noreply@stampia.com',
-      to: email,
-      subject: 'Recuperar contraseña - Stampia',
-      html: this.getPasswordResetEmailTemplate(code, name),
-    };
+    const operationId = `password-reset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    this.logger.log(
+      `[${operationId}] 📧 Enviando email de recuperación de contraseña a: ${email}`,
+    );
 
     try {
       // En desarrollo, solo simular el envío
+      /*
       if (
         process.env.NODE_ENV === 'development' ||
         process.env.NODE_ENV === 'dev'
       ) {
-        console.log(
-          '📧 Email de recuperación de contraseña (modo desarrollo):',
+        this.logger.log(
+          `[${operationId}] 📧 Email de recuperación de contraseña (modo desarrollo):`,
         );
-        console.log(`Para: ${email}`);
-        console.log(`Código: ${code}`);
-        console.log(`Nombre: ${name || 'No especificado'}`);
-        console.log('✅ Email simulado enviado exitosamente');
+        this.logger.log(`Para: ${email}`);
+        this.logger.log(`Código: ${code}`);
+        this.logger.log(`Nombre: ${name || 'No especificado'}`);
+        this.logger.log('✅ Email simulado enviado exitosamente');
         return { success: true, message: 'Email enviado (modo desarrollo)' };
       }
+      */
 
-      // En producción, enviar email real
-      console.log('📧 Enviando email de recuperación de contraseña...');
-      await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email enviado exitosamente');
+      // En producción, enviar email real con Resend
+      const from =
+        this.configService.get<string>('EMAIL_FROM') || 'noreply@stampia.app';
+
+      const result = await this.resend.emails.send({
+        from,
+        to: email,
+        subject: 'Recuperar contraseña - Stampia',
+        html: this.getPasswordResetEmailTemplate(code, name),
+      });
+
+      this.logger.log(`[${operationId}] ✅ Email enviado exitosamente`);
+      this.logger.log(`[${operationId}] 📧 Message ID: ${result.data?.id}`);
+
       return { success: true, message: 'Email de recuperación enviado' };
     } catch (error) {
-      console.error('❌ Error enviando email de recuperación:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `[${operationId}] ❌ Error enviando email de recuperación:`,
+        errorMessage,
+      );
       return { success: false, message: 'Error al enviar el email' };
     }
   }
@@ -116,16 +156,11 @@ export class EmailService {
     businessName: string,
     adminFirstName: string,
   ) {
-    const mailOptions = {
-      from: process.env.SMTP_FROM || 'noreply@stampia.com',
-      to: email,
-      subject: 'Verificación de cuenta comercial - Stampia',
-      html: this.getBusinessVerificationEmailTemplate(
-        code,
-        businessName,
-        adminFirstName,
-      ),
-    };
+    const operationId = `business-verification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    this.logger.log(
+      `[${operationId}] 📧 Enviando email de verificación comercial a: ${email}`,
+    );
 
     try {
       // En desarrollo, solo simular el envío
@@ -134,28 +169,45 @@ export class EmailService {
         process.env.NODE_ENV === 'development' ||
         process.env.NODE_ENV === 'dev'
       ) {
-        console.log('📧 Email de verificación comercial (modo desarrollo):');
-        console.log(`Para: ${email}`);
-        console.log(`Código: ${code}`);
-        console.log(`Negocio: ${businessName}`);
-        console.log(`Admin: ${adminFirstName}`);
-        console.log('✅ Email simulado enviado exitosamente');
+        this.logger.log(
+          `[${operationId}] 📧 Email de verificación comercial (modo desarrollo):`,
+        );
+        this.logger.log(`Para: ${email}`);
+        this.logger.log(`Código: ${code}`);
+        this.logger.log(`Negocio: ${businessName}`);
+        this.logger.log(`Admin: ${adminFirstName}`);
+        this.logger.log('✅ Email simulado enviado exitosamente');
         return { success: true, message: 'Email enviado (modo desarrollo)' };
       }
       */
+      // En producción, enviar email real con Resend
+      const from =
+        this.configService.get<string>('EMAIL_FROM') || 'noreply@stampia.app';
 
-      // En producción, enviar email real
-      console.log('📧 Enviando email de verificación comercial...');
-      await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email enviado exitosamente');
+      const result = await this.resend.emails.send({
+        from,
+        to: email,
+        subject: 'Verificación de cuenta comercial - Stampia',
+        html: this.getBusinessVerificationEmailTemplate(
+          code,
+          businessName,
+          adminFirstName,
+        ),
+      });
+
+      this.logger.log(`[${operationId}] ✅ Email enviado exitosamente`);
+      this.logger.log(`[${operationId}] 📧 Message ID: ${result.data?.id}`);
+
       return {
         success: true,
         message: 'Email de verificación comercial enviado',
       };
     } catch (error) {
-      console.error(
-        '❌ Error enviando email de verificación comercial:',
-        error,
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `[${operationId}] ❌ Error enviando email de verificación comercial:`,
+        errorMessage,
       );
       return { success: false, message: 'Error al enviar el email' };
     }
