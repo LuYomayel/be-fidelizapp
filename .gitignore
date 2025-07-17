@@ -48,3 +48,5 @@ Thumbs.db .env.backup
 # PM2 ecosystem config (contains secrets)
 ecosystem.config.js
 ecosystem.*.config.js
+
+uploads/*
