@@ -6,9 +6,10 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { UserProvider } from '@shared';
+import { IClient } from '@shared';
 
 @Entity('clients')
-export class Client {
+export class Client implements IClient {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -43,6 +44,9 @@ export class Client {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ default: true })
+  mustChangePassword: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

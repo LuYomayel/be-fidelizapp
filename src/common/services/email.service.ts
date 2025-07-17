@@ -58,7 +58,7 @@ export class EmailService {
 
     try {
       // En desarrollo, solo simular el envío
-      /*
+
       if (
         process.env.NODE_ENV === 'development' ||
         process.env.NODE_ENV === 'dev'
@@ -72,7 +72,7 @@ export class EmailService {
         this.logger.log('✅ Email simulado enviado exitosamente');
         return { success: true, message: 'Email enviado (modo desarrollo)' };
       }
-      */
+
       // En producción, enviar email real con Resend
       const from =
         this.configService.get<string>('EMAIL_FROM') || 'noreply@stampia.app';
@@ -108,7 +108,7 @@ export class EmailService {
 
     try {
       // En desarrollo, solo simular el envío
-      /*
+
       if (
         process.env.NODE_ENV === 'development' ||
         process.env.NODE_ENV === 'dev'
@@ -122,7 +122,6 @@ export class EmailService {
         this.logger.log('✅ Email simulado enviado exitosamente');
         return { success: true, message: 'Email enviado (modo desarrollo)' };
       }
-      */
 
       // En producción, enviar email real con Resend
       const from =
@@ -164,7 +163,7 @@ export class EmailService {
 
     try {
       // En desarrollo, solo simular el envío
-      /*
+
       if (
         process.env.NODE_ENV === 'development' ||
         process.env.NODE_ENV === 'dev'
@@ -179,7 +178,7 @@ export class EmailService {
         this.logger.log('✅ Email simulado enviado exitosamente');
         return { success: true, message: 'Email enviado (modo desarrollo)' };
       }
-      */
+
       // En producción, enviar email real con Resend
       const from =
         this.configService.get<string>('EMAIL_FROM') || 'noreply@stampia.app';

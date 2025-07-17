@@ -37,14 +37,18 @@ export class AuthService {
     email: string;
     emailVerified: boolean;
   } | null> {
-    const client = await this.clientsService.validateClient(email, password);
-    console.log('🔍 Validando cliente:', client);
-    if (client) {
+    const validation = await this.clientsService.validateClient(
+      email,
+      password,
+    );
+    console.log('🔍 Validando cliente:', validation);
+    if (validation.client) {
       return {
-        userId: client.id,
-        username: `${client.firstName || ''} ${client.lastName || ''}`.trim(),
-        email: client.email,
-        emailVerified: client.emailVerified,
+        userId: validation.client.id,
+        username:
+          `${validation.client.firstName || ''} ${validation.client.lastName || ''}`.trim(),
+        email: validation.client.email,
+        emailVerified: validation.client.emailVerified,
       };
     }
     return null;

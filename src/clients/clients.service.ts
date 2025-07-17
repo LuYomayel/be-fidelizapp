@@ -47,12 +47,14 @@ export class ClientsService {
         throw new ConflictException('El email ya está registrado');
       }
 
-      const hashedPassword = await bcrypt.hash(createClientDto.password, 10);
+      // Usar el email como contraseña temporal (será cambiada después de la verificación)
+      const hashedPassword = await bcrypt.hash(createClientDto.email, 10);
       const client = this.clientRepository.create({
         ...createClientDto,
         password: hashedPassword,
         provider: UserProvider.EMAIL,
         emailVerified: false,
+        mustChangePassword: true,
       });
 
       const savedClient = await this.clientRepository.save(client);
@@ -111,15 +113,21 @@ export class ClientsService {
       };
     }
 
-    // Marcar el email como verificado
-    await this.clientRepository.update({ email }, { emailVerified: true });
+    // Marcar el email como verificado y mantener mustChangePassword en true
+    await this.clientRepository.update(
+      { email },
+      {
+        emailVerified: true,
+        mustChangePassword: true, // Asegurar que debe cambiar la contraseña
+      },
+    );
 
     // Obtener el cliente actualizado
     const client = await this.findByEmail(email);
 
     return {
       success: true,
-      message: 'Email verificado correctamente',
+      message: 'Email verificado correctamente. Debes cambiar tu contraseña.',
       client: client
         ? {
             id: client.id,
@@ -128,6 +136,7 @@ export class ClientsService {
             lastName: client.lastName,
             emailVerified: client.emailVerified,
             provider: client.provider,
+            mustChangePassword: client.mustChangePassword,
           }
         : undefined,
     };
@@ -191,11 +200,121 @@ export class ClientsService {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.clientRepository.update({ email }, { password: hashedPassword });
+    await this.clientRepository.update(
+      { email },
+      {
+        password: hashedPassword,
+        mustChangePassword: false, // Ya no necesita cambiar la contraseña
+      },
+    );
 
     return {
       success: true,
       message: 'Contraseña actualizada correctamente',
+    };
+  }
+
+  async changePassword(
+    email: string,
+    newPassword: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    token?: string;
+    client?: any;
+  }> {
+    const client = await this.findByEmail(email);
+    if (!client) {
+      return {
+        success: false,
+        message: 'Cliente no encontrado',
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.clientRepository.update(
+      { email },
+      {
+        password: hashedPassword,
+        mustChangePassword: false, // Ya no necesita cambiar la contraseña
+      },
+    );
+
+    // Obtener el cliente actualizado
+    const updatedClient = await this.findByEmail(email);
+    if (!updatedClient) {
+      return {
+        success: false,
+        message: 'Error al actualizar la contraseña',
+      };
+    }
+
+    // Generar token JWT
+    const payload = {
+      userId: updatedClient.id,
+      username:
+        `${updatedClient.firstName || ''} ${updatedClient.lastName || ''}`.trim(),
+      email: updatedClient.email,
+      emailVerified: updatedClient.emailVerified,
+      provider: updatedClient.provider,
+    };
+    // Usar AuthService para generar el token (lo hará el controller)
+    return {
+      success: true,
+      message: 'Contraseña actualizada correctamente',
+      client: payload,
+    };
+  }
+
+  async changePasswordAfterRecovery(
+    email: string,
+    newPassword: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    token?: string;
+    client?: any;
+  }> {
+    const client = await this.findByEmail(email);
+    if (!client) {
+      return {
+        success: false,
+        message: 'Cliente no encontrado',
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.clientRepository.update(
+      { email },
+      {
+        password: hashedPassword,
+        mustChangePassword: false, // Ya no necesita cambiar la contraseña
+      },
+    );
+
+    // Obtener el cliente actualizado
+    const updatedClient = await this.findByEmail(email);
+    if (!updatedClient) {
+      return {
+        success: false,
+        message: 'Error al actualizar la contraseña',
+      };
+    }
+
+    // Generar token JWT
+    const payload = {
+      userId: updatedClient.id,
+      username:
+        `${updatedClient.firstName || ''} ${updatedClient.lastName || ''}`.trim(),
+      email: updatedClient.email,
+      emailVerified: updatedClient.emailVerified,
+      provider: updatedClient.provider,
+    };
+    // Usar AuthService para generar el token (lo hará el controller)
+    return {
+      success: true,
+      message: 'Contraseña actualizada correctamente',
+      client: payload,
     };
   }
 
@@ -301,24 +420,70 @@ export class ClientsService {
     password: string,
     hashedPassword: string,
   ): Promise<boolean> {
-    console.log('password', password, password.length);
-    console.log('hashedPassword', hashedPassword, hashedPassword.length);
     return await bcrypt.compare(password, hashedPassword);
   }
 
   async validateClient(
     email: string,
     password: string,
-  ): Promise<Client | null> {
+  ): Promise<{
+    client: Client | null;
+    needsVerification?: boolean;
+    mustChangePassword?: boolean;
+  }> {
     const client = await this.findByEmail(email);
-    if (
-      client &&
-      client.password &&
-      (await this.validatePassword(password, client.password))
-    ) {
-      return client;
+
+    if (!client) {
+      return { client: null };
     }
-    return null;
+
+    if (!client.password) {
+      return { client: null };
+    }
+
+    const isPasswordValid = await this.validatePassword(
+      password,
+      client.password,
+    );
+
+    if (!isPasswordValid) {
+      return { client: null };
+    }
+
+    if (!client.emailVerified) {
+      return {
+        client: null,
+        needsVerification: true,
+      };
+    }
+
+    return {
+      client,
+      mustChangePassword: client.mustChangePassword,
+    };
+  }
+
+  async validateRecoveryCode(
+    email: string,
+    code: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const validation = await this.verificationCodeService.validateCode(
+      email,
+      code,
+      VerificationCodeType.PASSWORD_RESET,
+    );
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.message,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Código verificado correctamente',
+    };
   }
 
   generateToken(client: Client): string {

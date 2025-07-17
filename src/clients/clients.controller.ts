@@ -22,6 +22,7 @@ import {
 } from '../common/dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthService } from '../auth/auth.service';
+import { UserProvider } from '@shared';
 
 @ApiTags('clients')
 @Controller('clients')
@@ -221,6 +222,110 @@ export class ClientsController {
     }
   }
 
+  @Post('change-password')
+  @ApiOperation({ summary: 'Cambiar contraseña después de verificación' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+        newPassword: { type: 'string', minLength: 6 },
+      },
+      required: ['email', 'newPassword'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña cambiada correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Error al cambiar la contraseña' })
+  async changePassword(@Body() body: { email: string; newPassword: string }) {
+    try {
+      const result = await this.clientsService.changePassword(
+        body.email,
+        body.newPassword,
+      );
+      if (result.success && result.client) {
+        // Generar token y datos de cliente igual que en login
+        const authResult = this.authService.loginClient(result.client);
+        return {
+          success: true,
+          data: {
+            client: authResult.user,
+            token: authResult.access_token,
+            tokens: {
+              accessToken: authResult.access_token,
+              refreshToken: authResult.access_token,
+            },
+          },
+          message: result.message,
+        };
+      }
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al cambiar la contraseña',
+      };
+    }
+  }
+
+  @Post('change-password-recovery')
+  @ApiOperation({ summary: 'Cambiar contraseña después de recuperación' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+        newPassword: { type: 'string', minLength: 6 },
+      },
+      required: ['email', 'newPassword'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña cambiada correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Error al cambiar la contraseña' })
+  async changePasswordAfterRecovery(
+    @Body() body: { email: string; newPassword: string },
+  ) {
+    try {
+      const result = await this.clientsService.changePasswordAfterRecovery(
+        body.email,
+        body.newPassword,
+      );
+      if (result.success && result.client) {
+        // Generar token y datos de cliente igual que en login
+        const authResult = this.authService.loginClient(result.client);
+        return {
+          success: true,
+          data: {
+            client: authResult.user,
+            token: authResult.access_token,
+            tokens: {
+              accessToken: authResult.access_token,
+              refreshToken: authResult.access_token,
+            },
+          },
+          message: result.message,
+        };
+      }
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al cambiar la contraseña',
+      };
+    }
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión de cliente' })
@@ -229,13 +334,22 @@ export class ClientsController {
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() loginClientDto: LoginClientDto) {
     try {
-      // Validar credenciales directamente sin usar guard
-      const client = await this.clientsService.validateClient(
+      // Validar credenciales usando el nuevo método
+      const validation = await this.clientsService.validateClient(
         loginClientDto.email,
         loginClientDto.password,
       );
 
-      if (!client) {
+      if (!validation.client) {
+        if (validation.needsVerification) {
+          return {
+            success: false,
+            data: null,
+            message: 'Debes verificar tu email antes de iniciar sesión',
+            requiresVerification: true,
+            email: loginClientDto.email,
+          };
+        }
         return {
           success: false,
           data: null,
@@ -243,24 +357,14 @@ export class ClientsController {
         };
       }
 
-      // Verificar si el email está verificado
-      if (!client.emailVerified) {
-        return {
-          success: false,
-          data: null,
-          message: 'Debes verificar tu email antes de iniciar sesión',
-          requiresVerification: true,
-          email: client.email,
-        };
-      }
-
       // Usar el método loginClient del AuthService
       const clientUser = {
-        userId: client.id,
-        username: `${client.firstName || ''} ${client.lastName || ''}`.trim(),
-        email: client.email,
-        emailVerified: client.emailVerified,
-        provider: client.provider as 'email' | 'google',
+        userId: validation.client.id,
+        username:
+          `${validation.client.firstName || ''} ${validation.client.lastName || ''}`.trim(),
+        email: validation.client.email,
+        emailVerified: validation.client.emailVerified,
+        provider: validation.client.provider,
       };
 
       const result = this.authService.loginClient(clientUser);
@@ -276,6 +380,7 @@ export class ClientsController {
           },
         },
         message: 'Inicio de sesión exitoso',
+        mustChangePassword: validation.mustChangePassword,
       };
     } catch (error: any) {
       console.error('Error en login de cliente:', error);
@@ -283,6 +388,41 @@ export class ClientsController {
         success: false,
         data: null,
         message: 'Error al iniciar sesión',
+      };
+    }
+  }
+
+  @Post('validate-recovery-code')
+  @ApiOperation({ summary: 'Validar código de recuperación' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+        code: { type: 'string', minLength: 6, maxLength: 6 },
+      },
+      required: ['email', 'code'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Código validado correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Código inválido o expirado' })
+  async validateRecoveryCode(@Body() body: { email: string; code: string }) {
+    try {
+      const result = await this.clientsService.validateRecoveryCode(
+        body.email,
+        body.code,
+      );
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Error al validar el código',
       };
     }
   }

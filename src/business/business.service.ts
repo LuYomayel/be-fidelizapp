@@ -19,6 +19,8 @@ import { Reward } from './entities/reward.entity';
 import { RewardRedemption } from './entities/reward-redemption.entity';
 import { VerificationCodeService } from '../common/services/verification-code.service';
 import { EmployeeService } from './employee.service';
+import { VerificationCodeType } from '../clients/entities/verification-code.entity';
+import { EmailService } from '../common/services/email.service';
 //TODO: Importar Reward
 
 @Injectable()
@@ -42,6 +44,7 @@ export class BusinessService {
     private stampService: StampService,
     private verificationCodeService: VerificationCodeService,
     private employeeService: EmployeeService,
+    private emailService: EmailService,
   ) {}
 
   async create(
@@ -497,6 +500,75 @@ export class BusinessService {
     return {
       business,
       mustChangePassword: business.mustChangePassword,
+    };
+  }
+
+  async sendPasswordResetCode(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const business = await this.findByEmail(email);
+      if (!business) {
+        // Por seguridad, no revelamos si el email existe o no
+        return {
+          success: true,
+          message: 'Si el email existe, recibirás un código de recuperación',
+        };
+      }
+
+      const result =
+        await this.verificationCodeService.generateAndSendBusinessPasswordResetCode(
+          business,
+        );
+
+      return result;
+    } catch (error) {
+      console.error('Error enviando código de recuperación:', error);
+      return {
+        success: false,
+        message: 'Error al enviar el código de recuperación',
+      };
+    }
+  }
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const validation = await this.verificationCodeService.validateCode(
+      email,
+      code,
+      VerificationCodeType.PASSWORD_RESET,
+    );
+
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.message,
+      };
+    }
+
+    const business = await this.findByEmail(email);
+    if (!business) {
+      return {
+        success: false,
+        message: 'Negocio no encontrado',
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.businessRepository.update(
+      { email },
+      {
+        password: hashedPassword,
+        mustChangePassword: false,
+      },
+    );
+
+    return {
+      success: true,
+      message: 'Contraseña actualizada correctamente',
     };
   }
 

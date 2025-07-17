@@ -132,6 +132,18 @@ export class VerificationCodeService {
     type: VerificationCodeType,
     clientId?: number,
   ): Promise<VerificationCode> {
+    // Invalidar todos los códigos anteriores del mismo tipo y email
+    await this.verificationCodeRepository.update(
+      {
+        email,
+        type,
+        used: false,
+      },
+      {
+        used: true, // Marcar como usado para invalidarlos
+      },
+    );
+
     const code = this.generateVerificationCode();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
 
@@ -183,5 +195,63 @@ export class VerificationCodeService {
       valid: true,
       message: 'Código verificado correctamente',
     };
+  }
+
+  async createBusinessVerificationCode(
+    email: string,
+    type: VerificationCodeType,
+    businessId?: number,
+  ): Promise<VerificationCode> {
+    // Invalidar todos los códigos anteriores del mismo tipo y email
+    await this.verificationCodeRepository.update(
+      {
+        email,
+        type,
+        used: false,
+      },
+      {
+        used: true, // Marcar como usado para invalidarlos
+      },
+    );
+
+    const code = this.generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    const verificationCode = this.verificationCodeRepository.create({
+      code,
+      type,
+      email,
+      businessId, // Usar businessId en lugar de clientId
+      expiresAt,
+    });
+
+    return await this.verificationCodeRepository.save(verificationCode);
+  }
+
+  async generateAndSendBusinessPasswordResetCode(
+    business: Business,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const verificationCode = await this.createBusinessVerificationCode(
+        business.email,
+        VerificationCodeType.PASSWORD_RESET,
+        business.id,
+      );
+
+      // Enviar email de recuperación de contraseña
+      const emailResult = await this.emailService.sendPasswordResetEmail(
+        business.email,
+        verificationCode.code,
+        business.adminFirstName,
+      );
+
+      return emailResult;
+    } catch (error) {
+      console.error('Error generating and sending password reset code:', error);
+      return {
+        success: false,
+        message: 'Error al generar y enviar el código de recuperación',
+      };
+    }
   }
 }

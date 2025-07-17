@@ -398,6 +398,82 @@ export class BusinessController {
     }
   }
 
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Solicitar código de recuperación de contraseña' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+      },
+      required: ['email'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Código de recuperación enviado' })
+  async forgotPassword(@Body() forgotPasswordDto: { email: string }) {
+    try {
+      const result = await this.businessService.sendPasswordResetCode(
+        forgotPasswordDto.email,
+      );
+      return {
+        success: result.success,
+        data: null,
+        message: result.message,
+      };
+    } catch (error: any) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error al enviar código';
+      return {
+        success: false,
+        data: null,
+        message: errorMessage,
+      };
+    }
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Restablecer contraseña con código' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email' },
+        code: { type: 'string', minLength: 6, maxLength: 6 },
+        newPassword: { type: 'string', minLength: 6 },
+      },
+      required: ['email', 'code', 'newPassword'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña restablecida correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Código inválido o expirado' })
+  async resetPassword(
+    @Body() body: { email: string; code: string; newPassword: string },
+  ) {
+    try {
+      const result = await this.businessService.resetPassword(
+        body.email,
+        body.code,
+        body.newPassword,
+      );
+      return {
+        success: result.success,
+        message: result.message,
+      };
+    } catch (error: any) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Error al restablecer la contraseña';
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+  }
+
   @Get('dashboard')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')

@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Client } from './client.entity';
+import { Business } from '../../business/entities/business.entity';
 
 export enum VerificationCodeType {
   EMAIL_VERIFICATION = 'email_verification',
@@ -37,6 +38,13 @@ export class VerificationCode {
   @ManyToOne(() => Client, { nullable: true })
   @JoinColumn({ name: 'clientId' })
   client?: Client;
+
+  @Column({ nullable: true })
+  businessId?: number;
+
+  @ManyToOne(() => Business, { nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column({ default: false })
   used: boolean;
