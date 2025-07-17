@@ -588,7 +588,6 @@ export class StampService {
           }
           return true;
         });
-        console.log('validRewards', validRewards);
         // Encontrar la recompensa más cercana (que requiera menos sellos)
         const nearestReward = validRewards.length > 0 ? validRewards[0] : null;
 

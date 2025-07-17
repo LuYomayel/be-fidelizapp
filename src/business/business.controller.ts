@@ -144,26 +144,7 @@ export class BusinessController {
     @UploadedFile() logo?: Express.Multer.File,
   ) {
     try {
-      console.log('🔍 DEBUG - Registro de negocio:');
-      console.log('- createBusinessDto:', createBusinessDto);
-      console.log(
-        '- logo recibido:',
-        logo
-          ? {
-              fieldname: logo.fieldname,
-              originalname: logo.originalname,
-              encoding: logo.encoding,
-              mimetype: logo.mimetype,
-              size: logo.size,
-              destination: logo.destination,
-              filename: logo.filename,
-              path: logo.path,
-            }
-          : 'No logo',
-      );
-
       const logoPath = logo ? logo?.path : undefined;
-      console.log('- logoPath final:', logoPath);
 
       const result = await this.businessService.create(
         createBusinessDto,
